@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sim Racing Manager</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ==================== CHAMPIONSHIP SELECTION ==================== -->
+  <div class="champ-screen active" id="championshipScreen">
+    <div class="champ-screen-inner">
+      <div class="champ-screen-header">
+        <div class="champ-logo">
+          <span>&#9654;</span> RACE<span class="champ-logo-sub">MGR</span>
+        </div>
+        <h2>Select Championship</h2>
+        <p>Each championship has its own teams, drivers, and save data.</p>
+      </div>
+      <div class="champ-cards">
+
+        <div class="champ-card" id="card-f1" onclick="selectChampionship('f1')">
+          <div class="champ-card-accent" style="background:#e10600"></div>
+          <div class="champ-card-icon">&#127937;</div>
+          <div class="champ-card-name">Formula 1</div>
+          <div class="champ-card-sub">FIA World Championship</div>
+          <div class="champ-card-desc">The pinnacle of motorsport. Single-seater open-wheel racing at its finest.</div>
+          <div class="champ-card-save" id="save-f1">No save data</div>
+          <div class="champ-card-btn" style="border-color:#e10600; color:#e10600">Enter &#8594;</div>
+        </div>
+
+        <div class="champ-card" id="card-wec" onclick="selectChampionship('wec')">
+          <div class="champ-card-accent" style="background:#0066cc"></div>
+          <div class="champ-card-icon">&#9200;</div>
+          <div class="champ-card-name">FIA WEC</div>
+          <div class="champ-card-sub">World Endurance Championship</div>
+          <div class="champ-card-desc">Hypercar, LMP2 and GTE endurance racing. Le Mans, Spa, Fuji and more.</div>
+          <div class="champ-card-save" id="save-wec">No save data</div>
+          <div class="champ-card-btn" style="border-color:#0066cc; color:#0066cc">Enter &#8594;</div>
+        </div>
+
+        <div class="champ-card" id="card-gt" onclick="selectChampionship('gt')">
+          <div class="champ-card-accent" style="background:#00a651"></div>
+          <div class="champ-card-icon">&#127937;</div>
+          <div class="champ-card-name">GT Championship</div>
+          <div class="champ-card-sub">GT3 &amp; GT4 Series</div>
+          <div class="champ-card-desc">Production-based GT racing. GT3, GT4 and GT2 cars from top manufacturers.</div>
+          <div class="champ-card-save" id="save-gt">No save data</div>
+          <div class="champ-card-btn" style="border-color:#00a651; color:#00a651">Enter &#8594;</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR NAV -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon">&#9654;</span>
+        <span class="logo-text">RACE<span>MGR</span></span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar">&#9776;</button>
+    </div>
+
+    <nav class="nav-menu">
+      <a href="#" class="nav-item active" data-section="dashboard">
+        <span class="nav-icon">&#9685;</span>
+        <span class="nav-label">Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-section="teams">
+        <span class="nav-icon">&#9873;</span>
+        <span class="nav-label">Teams</span>
+      </a>
+      <a href="#" class="nav-item" data-section="drivers">
+        <span class="nav-icon">&#9745;</span>
+        <span class="nav-label">Drivers</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-champ" id="sidebarChamp">
+        <span class="sidebar-champ-icon" id="sidebarChampIcon"></span>
+        <span class="sidebar-champ-name" id="sidebarChampName"></span>
+      </div>
+      <button class="btn-change-champ" onclick="openChampionshipScreen()" title="Change Championship">&#8635; Change</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="mainContent">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">Dashboard</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="champ-topbar-badge" id="champTopbarBadge">
+          <span id="champTopbarIcon"></span>
+          <span id="champTopbarName"></span>
+        </div>
+        <div class="stat-chips">
+          <div class="chip">
+            <span class="chip-label">Teams</span>
+            <span class="chip-value" id="chip-teams">0</span>
+          </div>
+          <div class="chip">
+            <span class="chip-label">Drivers</span>
+            <span class="chip-value" id="chip-drivers">0</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ==================== SECTION: DASHBOARD ==================== -->
+    <section class="section active" id="section-dashboard">
+      <div class="dashboard-hero">
+        <div class="hero-text">
+          <h2>Welcome to Sim Racing Manager</h2>
+          <p>Manage your teams, drivers, and race entries from one place.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" onclick="navigate('teams')">+ Add Team</button>
+            <button class="btn btn-secondary" onclick="navigate('drivers')">+ Add Driver</button>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="speedometer">
+            <div class="speed-arc"></div>
+            <div class="speed-needle" id="speedNeedle"></div>
+            <div class="speed-center">
+              <span class="speed-num" id="speedNum">0</span>
+              <span class="speed-unit">km/h</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon team-icon">&#9873;</div>
+          <div class="stat-info">
+            <div class="stat-number" id="stat-teams">0</div>
+            <div class="stat-label">Racing Teams</div>
+          </div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="bar-teams" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon driver-icon">&#9745;</div>
+          <div class="stat-info">
+            <div class="stat-number" id="stat-drivers">0</div>
+            <div class="stat-label">Active Drivers</div>
+          </div>
+          <div class="stat-bar"><div class="stat-bar-fill driver-bar" id="bar-drivers" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon nat-icon">&#127760;</div>
+          <div class="stat-info">
+            <div class="stat-number" id="stat-nations">0</div>
+            <div class="stat-label">Nationalities</div>
+          </div>
+          <div class="stat-bar"><div class="stat-bar-fill nation-bar" id="bar-nations" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Recent Activity</h3>
+        </div>
+        <div class="activity-list" id="activityList">
+          <div class="activity-empty">No activity yet. Add a team or driver to get started.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECTION: TEAMS ==================== -->
+    <section class="section" id="section-teams">
+
+      <!-- ADD TEAM FORM -->
+      <div class="panel form-panel">
+        <div class="panel-header">
+          <h3>&#9873; Add New Team</h3>
+          <button class="panel-toggle" id="toggleTeamForm">&#8963; Hide</button>
+        </div>
+        <div class="form-body" id="teamFormBody">
+          <form id="teamForm" novalidate>
+            <div class="form-grid">
+
+              <div class="form-group">
+                <label for="teamName">Team Name <span class="required">*</span></label>
+                <input type="text" id="teamName" placeholder="e.g. Red Racing Team" maxlength="50" />
+                <span class="field-error" id="err-teamName"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="teamCountry">Country / Origin <span class="required">*</span></label>
+                <input type="text" id="teamCountry" placeholder="e.g. Germany" maxlength="50" />
+                <span class="field-error" id="err-teamCountry"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="teamCar">Car Model <span class="required">*</span></label>
+                <input type="text" id="teamCar" placeholder="e.g. Ferrari 488 GT3" maxlength="60" />
+                <span class="field-error" id="err-teamCar"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="teamCategory">Category</label>
+                <select id="teamCategory">
+                  <option value="GT3">GT3</option>
+                  <option value="GT4">GT4</option>
+                  <option value="LMP2">LMP2</option>
+                  <option value="GTE">GTE</option>
+                  <option value="F1">Formula 1</option>
+                  <option value="F2">Formula 2</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="teamColor">Team Color</label>
+                <div class="color-picker-wrap">
+                  <input type="color" id="teamColor" value="#e10600" />
+                  <span class="color-preview" id="colorPreview" style="background:#e10600;"></span>
+                  <span class="color-hex" id="colorHex">#e10600</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="teamLogo">Team Logo</label>
+                <div class="logo-upload-wrap">
+                  <label class="logo-upload-btn" for="teamLogo">&#128247; Upload File</label>
+                  <input type="file" id="teamLogo" accept="image/*" />
+                  <span class="logo-divider">or</span>
+                  <input type="url" id="teamLogoUrl" class="logo-url-input" placeholder="Paste image URL..." />
+                  <button type="button" class="btn btn-ghost logo-url-load" id="teamLogoUrlLoad">Load</button>
+                </div>
+                <div class="logo-preview-wrap" id="teamLogoPreviewWrap">
+                  <img id="teamLogoPreview" class="logo-preview" src="" alt="" />
+                  <button type="button" class="logo-clear-btn" id="teamLogoClear" title="Remove logo">&#10005; Remove</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="teamCarPhoto">Team Car / Livery Photo</label>
+                <div class="logo-upload-wrap">
+                  <label class="logo-upload-btn" for="teamCarPhoto">&#128247; Upload File</label>
+                  <input type="file" id="teamCarPhoto" accept="image/*" />
+                  <span class="logo-divider">or</span>
+                  <input type="url" id="teamCarPhotoUrl" class="logo-url-input" placeholder="Paste image URL..." />
+                  <button type="button" class="btn btn-ghost logo-url-load" id="teamCarPhotoUrlLoad">Load</button>
+                </div>
+                <div class="logo-preview-wrap" id="teamCarPhotoPreviewWrap">
+                  <img id="teamCarPhotoPreview" class="logo-preview car-photo-preview" src="" alt="" />
+                  <button type="button" class="logo-clear-btn" id="teamCarPhotoClear" title="Remove photo">&#10005; Remove</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="teamBudget">Budget (M USD)</label>
+                <input type="number" id="teamBudget" placeholder="e.g. 50" min="0" max="9999" step="0.1" />
+              </div>
+
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Add Team</button>
+              <button type="button" class="btn btn-ghost" onclick="resetForm('teamForm')">Clear</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- TEAMS TABLE -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Registered Teams</h3>
+          <div class="panel-actions">
+            <input type="text" class="search-input" id="searchTeams" placeholder="&#128269; Search teams..." />
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="teamsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Team</th>
+                <th>Country</th>
+                <th>Car</th>
+                <th>Category</th>
+                <th>Budget</th>
+                <th>Drivers</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="teamsBody">
+              <tr class="empty-row">
+                <td colspan="8">No teams added yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECTION: DRIVERS ==================== -->
+    <section class="section" id="section-drivers">
+
+      <!-- ADD DRIVER FORM -->
+      <div class="panel form-panel">
+        <div class="panel-header">
+          <h3>&#9745; Add New Driver</h3>
+          <button class="panel-toggle" id="toggleDriverForm">&#8963; Hide</button>
+        </div>
+        <div class="form-body" id="driverFormBody">
+          <form id="driverForm" novalidate>
+            <div class="form-grid">
+
+              <div class="form-group">
+                <label for="driverFirst">First Name <span class="required">*</span></label>
+                <input type="text" id="driverFirst" placeholder="e.g. Max" maxlength="40" />
+                <span class="field-error" id="err-driverFirst"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="driverLast">Last Name <span class="required">*</span></label>
+                <input type="text" id="driverLast" placeholder="e.g. Verstappen" maxlength="40" />
+                <span class="field-error" id="err-driverLast"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="driverNumber">Car Number <span class="required">*</span></label>
+                <input type="number" id="driverNumber" placeholder="e.g. 1" min="1" max="999" />
+                <span class="field-error" id="err-driverNumber"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="driverNationality">Nationality <span class="required">*</span></label>
+                <input type="text" id="driverNationality" placeholder="e.g. Dutch" maxlength="50" />
+                <span class="field-error" id="err-driverNationality"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="driverTeam">Team</label>
+                <select id="driverTeam">
+                  <option value="">-- No Team (Free Agent) --</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="driverAge">Age</label>
+                <input type="number" id="driverAge" placeholder="e.g. 26" min="16" max="70" />
+              </div>
+
+              <div class="form-group">
+                <label for="driverPhoto">Driver Photo</label>
+                <div class="logo-upload-wrap">
+                  <label class="logo-upload-btn" for="driverPhoto">&#128247; Upload File</label>
+                  <input type="file" id="driverPhoto" accept="image/*" />
+                  <span class="logo-divider">or</span>
+                  <input type="url" id="driverPhotoUrl" class="logo-url-input" placeholder="Paste image URL..." />
+                  <button type="button" class="btn btn-ghost logo-url-load" id="driverPhotoUrlLoad">Load</button>
+                </div>
+                <div class="logo-preview-wrap" id="driverPhotoPreviewWrap">
+                  <img id="driverPhotoPreview" class="logo-preview driver-photo-preview" src="" alt="" />
+                  <button type="button" class="logo-clear-btn" id="driverPhotoClear" title="Remove photo">&#10005; Remove</button>
+                </div>
+              </div>
+
+              <div class="form-group full-width">
+                <label>Skill Rating</label>
+                <div class="skill-groups">
+
+                  <!-- PACE -->
+                  <div class="skill-group">
+                    <div class="skill-group-header">
+                      <span class="skill-group-name">&#9889; Pace</span>
+                      <span class="skill-group-avg" id="avg-pace">75</span>
+                    </div>
+                    <div class="skill-grid">
+                      <div class="skill-item">
+                        <span class="skill-label">Cornering</span>
+                        <input type="range" class="skill-range" id="skillCornering" min="1" max="99" value="75" oninput="updateSkillSub('cornering', this.value)" />
+                        <span class="skill-val" id="val-cornering">75</span>
+                      </div>
+                      <div class="skill-item">
+                        <span class="skill-label">Braking</span>
+                        <input type="range" class="skill-range" id="skillBraking" min="1" max="99" value="75" oninput="updateSkillSub('braking', this.value)" />
+                        <span class="skill-val" id="val-braking">75</span>
+                      </div>
+                      <div class="skill-item">
+                        <span class="skill-label">Reactions</span>
+                        <input type="range" class="skill-range" id="skillReactions" min="1" max="99" value="75" oninput="updateSkillSub('reactions', this.value)" />
+                        <span class="skill-val" id="val-reactions">75</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- CONSISTENCY -->
+                  <div class="skill-group">
+                    <div class="skill-group-header">
+                      <span class="skill-group-name">&#127919; Consistency</span>
+                      <span class="skill-group-avg" id="avg-consistency">75</span>
+                    </div>
+                    <div class="skill-grid">
+                      <div class="skill-item">
+                        <span class="skill-label">Accuracy</span>
+                        <input type="range" class="skill-range" id="skillAccuracy" min="1" max="99" value="75" oninput="updateSkillSub('accuracy', this.value)" />
+                        <span class="skill-val" id="val-accuracy">75</span>
+                      </div>
+                      <div class="skill-item">
+                        <span class="skill-label">Control</span>
+                        <input type="range" class="skill-range" id="skillControl" min="1" max="99" value="75" oninput="updateSkillSub('control', this.value)" />
+                        <span class="skill-val" id="val-control">75</span>
+                      </div>
+                      <div class="skill-item">
+                        <span class="skill-label">Smooth</span>
+                        <input type="range" class="skill-range" id="skillSmooth" min="1" max="99" value="75" oninput="updateSkillSub('smooth', this.value)" />
+                        <span class="skill-val" id="val-smooth">75</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- RACECRAFT -->
+                  <div class="skill-group">
+                    <div class="skill-group-header">
+                      <span class="skill-group-name">&#9876; Racecraft</span>
+                      <span class="skill-group-avg" id="avg-racecraft">75</span>
+                    </div>
+                    <div class="skill-grid">
+                      <div class="skill-item">
+                        <span class="skill-label">Adaptability</span>
+                        <input type="range" class="skill-range" id="skillAdaptability" min="1" max="99" value="75" oninput="updateSkillSub('adaptability', this.value)" />
+                        <span class="skill-val" id="val-adaptability">75</span>
+                      </div>
+                      <div class="skill-item">
+                        <span class="skill-label">Overtaking</span>
+                        <input type="range" class="skill-range" id="skillOvertaking" min="1" max="99" value="75" oninput="updateSkillSub('overtaking', this.value)" />
+                        <span class="skill-val" id="val-overtaking">75</span>
+                      </div>
+                      <div class="skill-item">
+                        <span class="skill-label">Defending</span>
+                        <input type="range" class="skill-range" id="skillDefending" min="1" max="99" value="75" oninput="updateSkillSub('defending', this.value)" />
+                        <span class="skill-val" id="val-defending">75</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- OVERALL -->
+                  <div class="skill-overall-bar">
+                    <span class="skill-overall-label">Overall Rating</span>
+                    <span class="skill-overall-value" id="computed-overall">75</span>
+                    <span class="rating-badge rating-b" id="computed-tier">B</span>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Add Driver</button>
+              <button type="button" class="btn btn-ghost" onclick="resetForm('driverForm')">Clear</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- DRIVERS TABLE -->
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Registered Drivers</h3>
+          <div class="panel-actions">
+            <input type="text" class="search-input" id="searchDrivers" placeholder="&#128269; Search drivers..." />
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="driversTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>No.</th>
+                <th>Driver</th>
+                <th>Nationality</th>
+                <th>Team</th>
+                <th>Age</th>
+                <th>Rating</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="driversBody">
+              <tr class="empty-row">
+                <td colspan="8">No drivers added yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast"></div>
+
+  <!-- DELETE CONFIRM MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-icon">&#9888;</div>
+      <h3 id="modalTitle">Confirm Delete</h3>
+      <p id="modalMessage">Are you sure you want to delete this item?</p>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="modalConfirm">Delete</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
