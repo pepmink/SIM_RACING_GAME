@@ -481,6 +481,195 @@ input[type="color"] {
   width: 28px; text-align: right; flex-shrink: 0;
 }
 
+/* Car setup sliders */
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.setup-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  row-gap: 10px;
+  column-gap: 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01) 0%, transparent 100%), var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.setup-label {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.setup-item .skill-range {
+  width: 100%;
+  min-width: 0;
+}
+.setup-item .skill-val {
+  width: 36px;
+  text-align: center;
+  border-radius: 999px;
+  background: rgba(225, 6, 0, 0.12);
+  border: 1px solid rgba(225, 6, 0, 0.35);
+  line-height: 1;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.car-overall-bar {
+  margin-bottom: 14px;
+}
+
+/* Sim racing preview */
+.sim-note {
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+.sim-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.sim-status {
+  color: var(--text-2);
+  font-size: 12px;
+}
+.monza-track-wrap {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+  padding: 16px;
+  min-height: 280px;
+  overflow: hidden;
+}
+.monza-track {
+  width: 100%;
+  height: 330px;
+  display: block;
+}
+.monza-base {
+  fill: none;
+  stroke: #1e2337;
+  stroke-width: 26;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.monza-sector {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.monza-sector-1 { stroke: #ff2b2b; }
+.monza-sector-2 { stroke: #21c7ff; }
+.monza-sector-3 { stroke: #f5d20a; }
+
+.corner-dot {
+  fill: #151a2a;
+  stroke: #3d435e;
+  stroke-width: 1.5;
+}
+.corner-label {
+  fill: #f0f0f5;
+  font-size: 8.5px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.drs-box {
+  fill: #12cd32;
+}
+.drs-box-label {
+  fill: #f0f0f5;
+  font-size: 10px;
+  font-weight: 800;
+  text-anchor: middle;
+  letter-spacing: 0.4px;
+}
+
+.speedtrap-box {
+  fill: #ea00ff;
+}
+.speedtrap-label {
+  fill: #f0f0f5;
+  font-size: 10px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+.sector-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+.sector-label-1 { fill: #ff2b2b; }
+.sector-label-2 { fill: #21c7ff; }
+.sector-label-3 { fill: #f5d20a; }
+
+.monza-overlays {
+  pointer-events: none;
+}
+.monza-markers {
+  position: absolute;
+  inset: 16px;
+  pointer-events: none;
+}
+.sim-race-dot {
+  stroke: rgba(255,255,255,0.95);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.45));
+}
+.track-team-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.35), 0 0 12px rgba(255,255,255,0.18);
+}
+.sim-team-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.sim-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 12.5px;
+}
+.sim-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.65);
+}
+
+@media (max-width: 768px) {
+  .monza-track {
+    height: 250px;
+  }
+  .monza-track-wrap {
+    min-height: 280px;
+  }
+}
+
+@media (max-width: 640px) {
+  .setup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Field error */
 .field-error { font-size: 11.5px; color: #ff5252; min-height: 14px; }
 
@@ -560,6 +749,18 @@ input[type="color"] {
   flex-shrink: 0; vertical-align: middle;
 }
 .team-name-cell { display: flex; align-items: center; }
+
+.flag-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flag-emoji {
+  font-size: 1rem;
+  line-height: 1;
+  filter: saturate(1.05);
+}
 
 /* Rating badge */
 .rating-badge {

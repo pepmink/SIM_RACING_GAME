@@ -33,6 +33,28 @@ let currentChampionship = null;
 let teamLogoData    = null;
 let teamCarPhotoData = null;
 let driverPhotoData  = null;
+let editingTeamCarSetup = null;
+
+const CAR_STAT_DEFAULTS = {
+  powerUnit: 75,
+  downforce: 75,
+  chassis: 75,
+  reliability: 75,
+  ersDeploy: 75,
+  tyreDegradation: 25
+};
+
+const SIM_DEFAULT_SPEED = 1;
+const SIM_BASE_PATH_SPEED = 90;
+const SIM_DOT_GAP = 26;
+
+const simState = {
+  running: false,
+  rafId: null,
+  startTs: 0,
+  speed: SIM_DEFAULT_SPEED,
+  teamsOnGrid: []
+};
 
 // ---------- State ----------
 const state = {
@@ -47,6 +69,8 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
   initTeamForm();
+  initCarSetupSection();
+  initSimRacingSection();
   initDriverForm();
   initSearch();
   initColorPicker();
@@ -133,7 +157,22 @@ function loadFromStorage() {
   if (saved) {
     const parsed = JSON.parse(saved);
     Object.assign(state, parsed);
+    state.teams = state.teams.map(team => ({
+      ...team,
+      carSetup: normalizeCarSetup(team.carSetup)
+    }));
   }
+}
+
+function normalizeCarSetup(setup) {
+  return {
+    powerUnit: Number(setup?.powerUnit) || CAR_STAT_DEFAULTS.powerUnit,
+    downforce: Number(setup?.downforce) || CAR_STAT_DEFAULTS.downforce,
+    chassis: Number(setup?.chassis) || CAR_STAT_DEFAULTS.chassis,
+    reliability: Number(setup?.reliability) || CAR_STAT_DEFAULTS.reliability,
+    ersDeploy: Number(setup?.ersDeploy) || CAR_STAT_DEFAULTS.ersDeploy,
+    tyreDegradation: Number(setup?.tyreDegradation) || CAR_STAT_DEFAULTS.tyreDegradation
+  };
 }
 
 
@@ -166,11 +205,23 @@ function navigate(sectionId) {
   });
 
   // Update page title
-  const titles = { dashboard: 'Dashboard', teams: 'Teams', drivers: 'Drivers' };
+  const titles = {
+    dashboard: 'Dashboard',
+    teams: 'Teams',
+    'car-setup': 'Car Setup',
+    'sim-racing': 'Sim Racing',
+    drivers: 'Drivers'
+  };
   document.getElementById('pageTitle').textContent = titles[sectionId] || sectionId;
 
   // Refresh team dropdown when navigating to drivers
   if (sectionId === 'drivers') populateTeamDropdown();
+  if (sectionId === 'car-setup') {
+    populateCarSetupTeamDropdown();
+    renderCarSetups();
+  }
+  if (sectionId === 'sim-racing') renderSimRacingPreview();
+  if (sectionId !== 'sim-racing') stopSimRacingAnimation();
 }
 
 // ============================================================
@@ -256,12 +307,14 @@ function initTeamForm() {
       budget:   parseFloat(getValue('teamBudget')) || null,
       logo:     teamLogoData,
       carPhoto: teamCarPhotoData,
+      carSetup: normalizeCarSetup(editingTeamCarSetup),
       createdAt: new Date().toISOString()
     };
 
     state.teams.push(team);
     teamLogoData = null;
     teamCarPhotoData = null;
+    editingTeamCarSetup = null;
     addActivity('team', `Team <strong>${team.name}</strong> added`);
     saveToStorage();
     renderAll();
@@ -419,10 +472,296 @@ function populateTeamDropdown() {
 // ============================================================
 function renderAll() {
   renderTeams();
+  renderCarSetups();
+  renderSimRacingPreview();
   renderDrivers(state.drivers);
   renderStats();
   updateChips();
   renderActivity();
+}
+
+function initSimRacingSection() {
+  const btn = document.getElementById('btnSimRacing');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    if (!canStartSimPreview()) {
+      showToast('At least 2 teams are required to preview Monza', 'info');
+      return;
+    }
+
+    if (simState.running) {
+      stopSimRacingAnimation();
+      setSimStatus('Simulation paused. Click Sim Racing to run again at 1x speed.');
+      return;
+    }
+
+    startSimRacingAnimation();
+    showToast('Simulation preview started at 1x speed.', 'success');
+  });
+
+  renderSimRacingPreview();
+}
+
+function canStartSimPreview() {
+  return state.teams.length >= 2;
+}
+
+function renderSimRacingPreview() {
+  const btn = document.getElementById('btnSimRacing');
+  const status = document.getElementById('simStatus');
+  const markerWrap = document.getElementById('monzaMarkers');
+  const legend = document.getElementById('simTeamLegend');
+  const raceDots = document.getElementById('monzaRaceDots');
+  if (!btn || !status || !markerWrap || !legend) return;
+
+  const ready = canStartSimPreview();
+  btn.disabled = !ready;
+
+  if (!ready) {
+    stopSimRacingAnimation();
+    btn.textContent = 'Sim Racing';
+    status.textContent = 'At least 2 teams are required to build the Monza grid.';
+    markerWrap.innerHTML = '';
+    if (raceDots) raceDots.innerHTML = '';
+    legend.innerHTML = '<span class="sim-status">Add 2 teams to show colored markers on the track.</span>';
+    return;
+  }
+
+  if (!simState.running) {
+    status.textContent = 'Monza preview is ready. Click Sim Racing to run team dots at 1x speed.';
+  }
+
+  const teamsOnGrid = state.teams.slice(0, 2);
+  simState.teamsOnGrid = teamsOnGrid;
+  btn.textContent = simState.running ? 'Stop Sim' : 'Sim Racing';
+  markerWrap.innerHTML = '';
+  renderRaceDotsAtDistance(0);
+
+  legend.innerHTML = teamsOnGrid.map((team, idx) => `
+    <span class="sim-legend-item">
+      <span class="sim-legend-dot" style="background:${team.color}"></span>
+      <span>P${idx + 1} · ${escHtml(team.name)}</span>
+    </span>
+  `).join('');
+}
+
+function startSimRacingAnimation() {
+  const path = document.getElementById('monzaRaceLine');
+  if (!path) return;
+
+  simState.speed = SIM_DEFAULT_SPEED;
+  simState.startTs = performance.now();
+  simState.running = true;
+  simState.teamsOnGrid = state.teams.slice(0, 2);
+
+  const btn = document.getElementById('btnSimRacing');
+  if (btn) btn.textContent = 'Stop Sim';
+
+  setSimStatus('Simulation preview running at 1x speed.');
+  renderRaceDotsAtDistance(0);
+
+  const lapLength = path.getTotalLength();
+
+  const tick = now => {
+    if (!simState.running) return;
+
+    const elapsedSec = (now - simState.startTs) / 1000;
+    const traveled = elapsedSec * SIM_BASE_PATH_SPEED * simState.speed;
+    renderRaceDotsAtDistance(traveled, lapLength);
+
+    simState.rafId = requestAnimationFrame(tick);
+  };
+
+  simState.rafId = requestAnimationFrame(tick);
+}
+
+function stopSimRacingAnimation() {
+  if (simState.rafId) cancelAnimationFrame(simState.rafId);
+  simState.rafId = null;
+  simState.running = false;
+
+  const btn = document.getElementById('btnSimRacing');
+  if (btn) btn.textContent = 'Sim Racing';
+}
+
+function renderRaceDotsAtDistance(distance, cachedLapLength) {
+  const path = document.getElementById('monzaRaceLine');
+  const dotsLayer = document.getElementById('monzaRaceDots');
+  if (!path || !dotsLayer) return;
+
+  const teams = simState.teamsOnGrid.length > 0 ? simState.teamsOnGrid : state.teams.slice(0, 2);
+  if (teams.length < 2) {
+    dotsLayer.innerHTML = '';
+    return;
+  }
+
+  const lapLength = cachedLapLength || path.getTotalLength();
+
+  dotsLayer.innerHTML = teams.map((team, idx) => {
+    const rawDistance = distance - idx * SIM_DOT_GAP;
+    const wrappedDistance = ((rawDistance % lapLength) + lapLength) % lapLength;
+    const point = path.getPointAtLength(wrappedDistance);
+
+    return `<circle class="sim-race-dot" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="7" fill="${team.color}"></circle>`;
+  }).join('');
+}
+
+function setSimStatus(message) {
+  const status = document.getElementById('simStatus');
+  if (status) status.textContent = message;
+}
+
+function initCarSetupSection() {
+  const teamSelect = document.getElementById('carSetupTeam');
+  if (!teamSelect) return;
+
+  populateCarSetupTeamDropdown();
+  updateCarSetupOverall();
+
+  teamSelect.addEventListener('change', () => {
+    document.getElementById('err-carSetupTeam').textContent = '';
+    loadSelectedTeamCarSetup();
+  });
+
+  document.getElementById('carSetupForm').addEventListener('submit', e => {
+    e.preventDefault();
+
+    const teamId = getValue('carSetupTeam');
+    if (!teamId) {
+      document.getElementById('err-carSetupTeam').textContent = 'Please select a team';
+      return;
+    }
+
+    const team = state.teams.find(t => String(t.id) === String(teamId));
+    if (!team) return;
+
+    team.carSetup = readCarSetupFromInputs();
+    saveToStorage();
+    renderCarSetups();
+    showToast(`Saved car setup for "${team.name}"`, 'success');
+  });
+}
+
+function populateCarSetupTeamDropdown() {
+  const sel = document.getElementById('carSetupTeam');
+  if (!sel) return;
+
+  const current = sel.value;
+  sel.innerHTML = '<option value="">-- Select a team --</option>';
+
+  state.teams.forEach(team => {
+    const opt = document.createElement('option');
+    opt.value = team.id;
+    opt.textContent = team.name;
+    sel.appendChild(opt);
+  });
+
+  if (state.teams.length === 0) {
+    setCarSetupInputs(CAR_STAT_DEFAULTS);
+    return;
+  }
+
+  const stillExists = state.teams.some(t => String(t.id) === String(current));
+  sel.value = stillExists ? current : String(state.teams[0].id);
+  loadSelectedTeamCarSetup();
+}
+
+function loadSelectedTeamCarSetup() {
+  const teamId = getValue('carSetupTeam');
+  if (!teamId) {
+    setCarSetupInputs(CAR_STAT_DEFAULTS);
+    return;
+  }
+
+  const team = state.teams.find(t => String(t.id) === String(teamId));
+  setCarSetupInputs(normalizeCarSetup(team?.carSetup));
+}
+
+function updateCarStatValue(statKey, value) {
+  const el = document.getElementById(`val-car-${statKey}`);
+  if (el) el.textContent = value;
+  updateCarSetupOverall();
+}
+
+function setCarSetupInputs(setup) {
+  const normalized = normalizeCarSetup(setup);
+  const ids = {
+    powerUnit: 'carPowerUnit',
+    downforce: 'carDownforce',
+    chassis: 'carChassis',
+    reliability: 'carReliability',
+    ersDeploy: 'carErsDeploy',
+    tyreDegradation: 'carTyreDegradation'
+  };
+
+  Object.entries(ids).forEach(([key, inputId]) => {
+    document.getElementById(inputId).value = normalized[key];
+    document.getElementById(`val-car-${key}`).textContent = normalized[key];
+  });
+
+  updateCarSetupOverall();
+}
+
+function readCarSetupFromInputs() {
+  return {
+    powerUnit: parseInt(getValue('carPowerUnit')),
+    downforce: parseInt(getValue('carDownforce')),
+    chassis: parseInt(getValue('carChassis')),
+    reliability: parseInt(getValue('carReliability')),
+    ersDeploy: parseInt(getValue('carErsDeploy')),
+    tyreDegradation: parseInt(getValue('carTyreDegradation'))
+  };
+}
+
+function getCarOverall(setup) {
+  const s = normalizeCarSetup(setup);
+  return Math.round((s.powerUnit + s.downforce + s.chassis + s.reliability + s.ersDeploy + (100 - s.tyreDegradation)) / 6);
+}
+
+function updateCarSetupOverall() {
+  const setup = readCarSetupFromInputs();
+  const overall = getCarOverall(setup);
+  const { tierLabel, tierClass } = getRatingTier(overall);
+
+  document.getElementById('carOverall').textContent = overall;
+  const tierEl = document.getElementById('carOverallTier');
+  tierEl.textContent = tierLabel;
+  tierEl.className = `rating-badge ${tierClass}`;
+}
+
+function renderCarSetups() {
+  const tbody = document.getElementById('carSetupsBody');
+  if (!tbody) return;
+
+  if (state.teams.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No teams available yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = state.teams.map(team => {
+    const setup = normalizeCarSetup(team.carSetup);
+    const overall = getCarOverall(setup);
+    const { tierLabel, tierClass } = getRatingTier(overall);
+
+    return `
+      <tr>
+        <td>
+          <div class="team-name-cell">
+            <span class="team-dot" style="background:${team.color}; box-shadow: 0 0 6px ${team.color}"></span>
+            <strong>${escHtml(team.name)}</strong>
+          </div>
+        </td>
+        <td>${setup.powerUnit}</td>
+        <td>${setup.downforce}</td>
+        <td>${setup.chassis}</td>
+        <td>${setup.reliability}</td>
+        <td>${setup.ersDeploy}</td>
+        <td>${setup.tyreDegradation}</td>
+        <td><span class="rating-badge ${tierClass}">${tierLabel} · ${overall}</span></td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function renderTeams(list = state.teams) {
@@ -625,6 +964,8 @@ function editTeam(id) {
     carPhotoPreview.src = '';
     carPhotoWrap.classList.remove('visible');
   }
+
+  editingTeamCarSetup = normalizeCarSetup(team.carSetup);
 
   // Remove old entry and change button
   state.teams = state.teams.filter(t => t.id !== id);
@@ -918,6 +1259,7 @@ function resetForm(formId) {
     document.getElementById('teamCarPhotoPreviewWrap').classList.remove('visible');
     document.getElementById('teamCarPhoto').value = '';
     document.getElementById('teamCarPhotoUrl').value = '';
+    editingTeamCarSetup = null;
   }
 
   // Reset skill display

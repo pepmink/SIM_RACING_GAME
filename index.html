@@ -73,6 +73,14 @@
         <span class="nav-icon">&#9873;</span>
         <span class="nav-label">Teams</span>
       </a>
+      <a href="#" class="nav-item" data-section="car-setup">
+        <span class="nav-icon">&#9881;</span>
+        <span class="nav-label">Car Setup</span>
+      </a>
+      <a href="#" class="nav-item" data-section="sim-racing">
+        <span class="nav-icon">&#127949;</span>
+        <span class="nav-label">Sim Racing</span>
+      </a>
       <a href="#" class="nav-item" data-section="drivers">
         <span class="nav-icon">&#9745;</span>
         <span class="nav-label">Drivers</span>
@@ -301,6 +309,175 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECTION: CAR SETUP ==================== -->
+    <section class="section" id="section-car-setup">
+
+      <div class="panel form-panel">
+        <div class="panel-header">
+          <h3>&#9881; Car Performance Setup</h3>
+        </div>
+        <div class="form-body">
+          <form id="carSetupForm" novalidate>
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label for="carSetupTeam">Select Team <span class="required">*</span></label>
+                <select id="carSetupTeam">
+                  <option value="">-- Select a team --</option>
+                </select>
+                <span class="field-error" id="err-carSetupTeam"></span>
+              </div>
+
+              <div class="form-group full-width">
+                <label>Car Stats</label>
+                <div class="setup-grid">
+                  <div class="setup-item">
+                    <span class="setup-label">Power Unit</span>
+                    <input type="range" class="skill-range" id="carPowerUnit" min="1" max="99" value="75" oninput="updateCarStatValue('powerUnit', this.value)" />
+                    <span class="skill-val" id="val-car-powerUnit">75</span>
+                  </div>
+                  <div class="setup-item">
+                    <span class="setup-label">Downforce</span>
+                    <input type="range" class="skill-range" id="carDownforce" min="1" max="99" value="75" oninput="updateCarStatValue('downforce', this.value)" />
+                    <span class="skill-val" id="val-car-downforce">75</span>
+                  </div>
+                  <div class="setup-item">
+                    <span class="setup-label">Chassis</span>
+                    <input type="range" class="skill-range" id="carChassis" min="1" max="99" value="75" oninput="updateCarStatValue('chassis', this.value)" />
+                    <span class="skill-val" id="val-car-chassis">75</span>
+                  </div>
+                  <div class="setup-item">
+                    <span class="setup-label">Reliability</span>
+                    <input type="range" class="skill-range" id="carReliability" min="1" max="99" value="75" oninput="updateCarStatValue('reliability', this.value)" />
+                    <span class="skill-val" id="val-car-reliability">75</span>
+                  </div>
+                  <div class="setup-item">
+                    <span class="setup-label">ERS Deploy</span>
+                    <input type="range" class="skill-range" id="carErsDeploy" min="1" max="99" value="75" oninput="updateCarStatValue('ersDeploy', this.value)" />
+                    <span class="skill-val" id="val-car-ersDeploy">75</span>
+                  </div>
+                  <div class="setup-item">
+                    <span class="setup-label">Tyre Degradation (Lower is better)</span>
+                    <input type="range" class="skill-range" id="carTyreDegradation" min="1" max="99" value="25" oninput="updateCarStatValue('tyreDegradation', this.value)" />
+                    <span class="skill-val" id="val-car-tyreDegradation">25</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="skill-overall-bar car-overall-bar">
+              <span class="skill-overall-label">Overall Car Rating</span>
+              <span class="skill-overall-value" id="carOverall">75</span>
+              <span class="rating-badge rating-b" id="carOverallTier">B</span>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Save Car Setup</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Team Car Setups</h3>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Team</th>
+                <th>Power Unit</th>
+                <th>Downforce</th>
+                <th>Chassis</th>
+                <th>Reliability</th>
+                <th>ERS Deploy</th>
+                <th>Tyre Degradation (Lower Better)</th>
+                <th>Overall</th>
+              </tr>
+            </thead>
+            <tbody id="carSetupsBody">
+              <tr class="empty-row">
+                <td colspan="8">No teams available yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECTION: SIM RACING ==================== -->
+    <section class="section" id="section-sim-racing">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>&#127949; Sim Racing - Monza Preview</h3>
+        </div>
+        <div class="form-body">
+          <p class="sim-note">Complete team and car setup first, then click Sim Racing to enter simulation mode (in development).</p>
+
+          <div class="sim-actions">
+            <button type="button" class="btn btn-primary" id="btnSimRacing">Sim Racing</button>
+            <span class="sim-status" id="simStatus">At least 2 teams are required to build the grid.</span>
+          </div>
+
+          <div class="monza-track-wrap" id="monzaTrackWrap">
+            <svg class="monza-track" viewBox="0 0 800 450" aria-label="Monza track preview" role="img">
+              <rect width="800" height="450" fill="white" />
+
+              <path d="M 760 372 L 580 372 C 570 372 560 375 550 378 L 415 378" fill="none" stroke="#bdc3c7" stroke-width="4" />
+              <text x="760" y="365" font-family="Arial" font-size="12" font-weight="bold" text-anchor="end">PIT IN</text>
+              <text x="510" y="370" font-family="Arial" font-size="12" font-weight="bold">PIT OUT</text>
+
+              <path id="monzaRaceLine" d="M 600 380
+                       L 415 380 L 415 365 L 415 365 L 402 380
+                       L 300 380
+                       C 249 380 215 375 205 330
+                       L 185 240 L 175 225 L 185 220
+                       L 145 110
+                       C 140 75 185 75 185 75
+                       L 235 75
+                       C 265 75 275 90 281 96
+                       L 460 270
+                       C 475 285 490 285 500 270
+                       C 510 255 525 255 535 270
+                       L 780 270
+                       C 840 270 840 380 780 380
+                       Z"
+                    fill="none" stroke="black" stroke-width="8" stroke-linejoin="round" />
+
+                  <g id="monzaRaceDots"></g>
+
+              <line x1="600" y1="365" x2="600" y2="395" stroke="black" stroke-width="2" />
+              <rect x="595" y="375" width="10" height="10" fill="url(#checkered)" />
+              <defs>
+                <pattern id="checkered" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+                  <rect width="2" height="2" fill="black" />
+                  <rect x="2" y="2" width="2" height="2" fill="black" />
+                </pattern>
+              </defs>
+              <text x="575" y="405" font-family="Arial" font-size="14" font-weight="bold" fill="red">◀ START</text>
+
+              <g font-family="Arial" font-size="16" font-weight="bold" fill="black">
+                <text x="403" y="405">1</text>
+                <text x="403" y="355">2</text>
+                <text x="215" y="400">3</text>
+                <text x="205" y="240">4</text>
+                <text x="165" y="240">5</text>
+                <text x="125" y="105">6</text>
+                <text x="245" y="65">7</text>
+                <text x="455" y="260">8</text>
+                <text x="490" y="250">9</text>
+                <text x="525" y="260">10</text>
+                <text x="785" y="260">11</text>
+              </g>
+            </svg>
+            <div class="monza-markers" id="monzaMarkers"></div>
+          </div>
+
+          <div class="sim-team-legend" id="simTeamLegend"></div>
         </div>
       </div>
     </section>
