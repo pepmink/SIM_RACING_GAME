@@ -823,7 +823,7 @@ function renderSimRacingPreview() {
   }
 
   if (!simState.running) {
-    status.textContent = `Monza preview is ready. Speed is based on Power Unit (${SIM_POWER_UNIT_MAX} => ${SIM_MAX_SPEED_KMH} km/h).`;
+    status.textContent = `Monza preview is ready. Speed combines Car Performance and Driver Skills.`;
   }
 
   const teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
@@ -836,7 +836,7 @@ function renderSimRacingPreview() {
   legend.innerHTML = simState.teamRuns.map((run, idx) => `
     <span class="sim-legend-item">
       <span class="sim-legend-dot" style="background:${run.team.color}"></span>
-      <span>P${idx + 1} · ${escHtml(run.team.name)} · ${Math.round(run.speedKmh)} km/h</span>
+      <span>P${idx + 1} · ${escHtml(run.tag)} (${escHtml(run.team.name)}) · ${Math.round(run.speedKmh)} km/h</span>
     </span>
   `).join('');
 }
@@ -854,7 +854,7 @@ function startSimRacingAnimation() {
   const btn = document.getElementById('btnSimRacing');
   if (btn) btn.textContent = 'Stop Sim';
 
-  setSimStatus('Simulation preview running. Cars use speed from Power Unit and can overtake.');
+  setSimStatus('Simulation preview running. Speed is dynamically calculated from Team Setup & Driver Skills.');
   renderRaceDotsAtTime(0);
 
   const lapLength = path.getTotalLength();
@@ -886,7 +886,7 @@ function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
   if (!path || !dotsLayer) return;
 
   const runs = simState.teamRuns.length > 0
-    ? simState.teamRuns.slice(0, SIM_MAX_TEAMS_ON_TRACK)
+    ? simState.teamRuns
     : buildSimTeamRuns(state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK));
 
   if (runs.length < 2) {
@@ -902,13 +902,13 @@ function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
     const rawDistance = elapsedSec * run.pathSpeed - run.gridOffset;
     const wrappedDistance = ((rawDistance % lapLength) + lapLength) % lapLength;
     const point = getPointWithLaneOffset(path, wrappedDistance, laneOffset, lapLength);
-    const teamTag = getTeamTag(run.team?.name, run.team?.shortTag);
+    const teamTag = run.tag;
     const labelX = point.x + SIM_DOT_RADIUS + 3;
     const labelY = point.y - (SIM_DOT_RADIUS + 2);
 
     return `
       <g class="sim-race-marker">
-        <title>${escHtml(run.team.name)} · ${Math.round(run.speedKmh)} km/h</title>
+        <title>${escHtml(run.tag)} (${escHtml(run.team.name)}) · ${Math.round(run.speedKmh)} km/h</title>
         <circle class="sim-race-dot" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${SIM_DOT_RADIUS}" fill="${run.team.color}"></circle>
         <text class="sim-race-tag" x="${labelX.toFixed(2)}" y="${labelY.toFixed(2)}">${escHtml(teamTag)}</text>
       </g>
@@ -918,17 +918,42 @@ function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
 
 function buildSimTeamRuns(teamsOnGrid) {
   const list = Array.isArray(teamsOnGrid) ? teamsOnGrid.slice(0, SIM_MAX_TEAMS_ON_TRACK) : [];
-  const center = (list.length - 1) / 2;
+  const runs = [];
+  list.forEach(team => {
+    const teamDrivers = state.drivers.filter(d => String(d.teamId) === String(team.id)).slice(0, 2);
+    for (let i = 0; i < 2; i++) {
+        let tag = "";
+        let d = teamDrivers[i];
+        if (d) {
+            const baseTag = d.seedId || d.last || d.first || `D${d.id || i}`;
+            tag = String(baseTag).substring(0, 3).toUpperCase();
+        } else {
+            const baseTag = team.seedId || team.name || `T${team.id || i}`;
+            tag = String(baseTag).substring(0, 3).toUpperCase() + (i + 1);
+        }
+        runs.push({ team, driver: d, tag });
+    }
+  });
 
-  return list.map((team, idx) => {
+  const center = (runs.length - 1) / 2;
+
+  return runs.map((runObj, idx) => {
+    const team = runObj.team;
     const setup = normalizeCarSetup(team.carSetup);
     const pu = Math.min(SIM_POWER_UNIT_MAX, Math.max(1, Number(setup.powerUnit) || CAR_STAT_DEFAULTS.powerUnit));
-    const speedKmh = SIM_MAX_SPEED_KMH - (SIM_POWER_UNIT_MAX - pu) * SIM_KMH_DROP_PER_PU;
+    
+    const carOverall = getCarOverall(setup);
+    let finalRating = carOverall;
 
-    return {
-      team,
-      powerUnit: pu,
-      speedKmh,
+    if (runObj.driver && runObj.driver.skills) {
+        const driverSkills = getComputedSkills(runObj.driver.skills);
+        // Combine 60% car efficiency and 40% driver overall skill (with a tiny bonus for racecraft)
+        finalRating = (carOverall * 0.6) + (driverSkills.overall * 0.35) + (driverSkills.racecraft * 0.05);
+    }
+    
+    // Scale rating to realistic KM/H: max 350 for 100 rating
+    let speedKmh = SIM_MAX_SPEED_KMH - (100 - Math.min(100, finalRating)) * 1.8;
+    speedKmh += (idx % 2 === 0 ? 0.3 : -0.3); // microscopic variance to prevent identical speeds
       pathSpeed: (speedKmh / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed,
       laneIndex: idx % SIM_LANE_COUNT,
       gridOffset: Math.floor(idx / SIM_LANE_COUNT) * SIM_ROW_GAP,
