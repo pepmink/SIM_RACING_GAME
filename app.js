@@ -109,7 +109,7 @@ const CAR_STAT_DEFAULTS = {
 
 const SIM_DEFAULT_SPEED = 1;
 const SIM_BASE_PATH_SPEED = 90;
-const SIM_MAX_SPEED_KMH = 350;
+const SIM_MAX_SPEED_KMH = 370;
 const SIM_POWER_UNIT_MAX = 99;
 const SIM_KMH_DROP_PER_PU = 2;
 const SIM_MAX_TEAMS_ON_TRACK = 10;
@@ -117,12 +117,36 @@ const SIM_LANE_COUNT = 3;
 const SIM_LANE_SPACING = 2.4;
 const SIM_ROW_GAP = 34;
 const SIM_DOT_RADIUS = 2.4;
+const SIM_TURN1_ENTRY_KMH = 90;
+const SIM_TURN2_ENTRY_KMH = 85;
+const SIM_BRAKE_ZONE_WINDOW = 12;
+const SIM_BRAKE_PREP_DISTANCE = 64;
+const SIM_APEX_HOLD_WINDOW = 8;
+const SIM_BRAKE_DECEL_KMH_PER_SEC = 110;
+const SIM_ACCEL_KMH_PER_SEC = 58;
+const SIM_TURN1_MARKER = { x: 403, y: 405 };
+const SIM_TURN2_MARKER = { x: 403, y: 355 };
+const SIM_ERS_DEPLOY_GAP_SEC = 3;
+const SIM_ERS_BATTERY_START = 100;
+const SIM_ERS_MIN_BATTERY_TO_DEPLOY = 15;
+const SIM_ERS_MAX_BOOST_KMH_AT_99 = 30;
+const SIM_ERS_BOOST_DROP_PER_POINT = 2;
+const SIM_ERS_DRAIN_AT_99_PER_SEC = 3;
+const SIM_ERS_DRAIN_ADD_PER_POINT_LOST = 5;
+const SIM_ERS_CHARGE_REFERENCE = 90;
+const SIM_ERS_CHARGE_AT_90_PER_SEC = 4;
+const SIM_ERS_CHARGE_ADD_PER_POINT_ABOVE_90 = 2;
+const SIM_ERS_CHARGE_DROP_PER_POINT_BELOW_90 = 1.5;
 
 const simState = {
   running: false,
   rafId: null,
   startTs: 0,
+  lastTickTs: 0,
   speed: SIM_DEFAULT_SPEED,
+  lapLength: 0,
+  turn1Distance: null,
+  turn2Distance: null,
   teamsOnGrid: [],
   teamRuns: []
 };
@@ -228,11 +252,31 @@ function loadFromStorage() {
   if (saved) {
     const parsed = JSON.parse(saved);
     Object.assign(state, parsed);
-    state.teams = state.teams.map(team => ({
-      ...team,
-      shortTag: normalizeTeamTag(team.shortTag) || null,
-      carSetup: normalizeCarSetup(team.carSetup)
-    }));
+    const defaultTeamSeedPrefix = `default:${currentChampionship}:`;
+    const defaultDriverSeedPrefix = `default-driver:${currentChampionship}:`;
+
+    // Keep only seeded defaults and drop web-entered custom records.
+    state.teams = state.teams
+      .filter(team => typeof team.seedKey === 'string' && team.seedKey.startsWith(defaultTeamSeedPrefix))
+      .map(team => ({
+        ...team,
+        logo: null,
+        carPhoto: null,
+        shortTag: normalizeTeamTag(team.shortTag) || null,
+        carSetup: normalizeCarSetup(team.carSetup)
+      }));
+
+    state.drivers = state.drivers
+      .filter(driver => typeof driver.seedKey === 'string' && driver.seedKey.startsWith(defaultDriverSeedPrefix))
+      .map(driver => ({
+        ...driver,
+        age: null,
+        photo: null,
+        skills: normalizeDriverSkills(driver.skills)
+      }));
+
+    // Clear activity that came from previous web edits.
+    state.activity = [];
   }
 
   // Ensure IDs continue correctly even if schema changed between code versions.
@@ -241,7 +285,7 @@ function loadFromStorage() {
   state.nextTeamId = Math.max(Number(state.nextTeamId) || 1, maxTeamId + 1);
   state.nextDriverId = Math.max(Number(state.nextDriverId) || 1, maxDriverId + 1);
 
-  // Seed defaults safely: only add missing defaults, never overwrite user saves.
+  // Seed defaults and keep values aligned with in-code default datasets.
   const teamsSeeded = ensureDefaultTeams();
   const driversSeeded = ensureDefaultDrivers();
   if (teamsSeeded || driversSeeded) saveToStorage();
@@ -266,22 +310,17 @@ function ensureDefaultTeams() {
     const seedKey = `default:${currentChampionship}:${seedId}`;
     const seededTeam = state.teams.find(t => t.seedKey === seedKey);
     if (seededTeam) {
-      const normalizedExistingTag = normalizeTeamTag(seededTeam.shortTag);
-      if (!normalizedExistingTag) {
-        seededTeam.shortTag = normalizeTeamTag(team.shortTag || getTeamTag(team.name)) || null;
-        changed = true;
-      }
-
-      if (isUntouchedDefaultCarSetup(seededTeam.carSetup)) {
-        seededTeam.name = team.name;
-        seededTeam.country = team.country;
-        seededTeam.car = team.car;
-        seededTeam.category = team.category;
-        seededTeam.color = team.color;
-        seededTeam.budget = team.budget ?? null;
-        seededTeam.carSetup = normalizeCarSetup(team.carSetup);
-        changed = true;
-      }
+      seededTeam.name = team.name;
+      seededTeam.country = team.country;
+      seededTeam.car = team.car;
+      seededTeam.category = team.category;
+      seededTeam.color = team.color;
+      seededTeam.budget = team.budget ?? null;
+      seededTeam.logo = null;
+      seededTeam.carPhoto = null;
+      seededTeam.shortTag = normalizeTeamTag(team.shortTag || getTeamTag(team.name)) || null;
+      seededTeam.carSetup = normalizeCarSetup(team.carSetup);
+      changed = true;
       return;
     }
 
@@ -371,15 +410,15 @@ function ensureDefaultDrivers() {
 
     const seededDriver = state.drivers.find(d => d.seedKey === seedKey);
     if (seededDriver) {
-      if (isUntouchedDefaultSkills(seededDriver.skills)) {
-        seededDriver.first = driver.first;
-        seededDriver.last = driver.last;
-        seededDriver.number = Number(driver.number);
-        seededDriver.nationality = driver.nationality;
-        seededDriver.teamId = String(team.id);
-        seededDriver.skills = normalizeDriverSkills(driver.skills);
-        changed = true;
-      }
+      seededDriver.first = driver.first;
+      seededDriver.last = driver.last;
+      seededDriver.number = Number(driver.number);
+      seededDriver.nationality = driver.nationality;
+      seededDriver.teamId = String(team.id);
+      seededDriver.age = null;
+      seededDriver.photo = null;
+      seededDriver.skills = normalizeDriverSkills(driver.skills);
+      changed = true;
       return;
     }
 
@@ -823,22 +862,22 @@ function renderSimRacingPreview() {
   }
 
   if (!simState.running) {
-    status.textContent = `Monza preview is ready. Speed combines Car Performance and Driver Skills.`;
+    status.textContent = `Monza preview is ready. ERS auto deploy triggers under 3.000s gap when battery is above 15%.`;
   }
 
   const teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
   simState.teamsOnGrid = teamsOnGrid;
   simState.teamRuns = buildSimTeamRuns(teamsOnGrid);
+
+  const path = document.getElementById('monzaRaceLine');
+  if (path) {
+    simState.lapLength = path.getTotalLength();
+    updateSimBrakeDistances(path, simState.lapLength);
+  }
+
   btn.textContent = simState.running ? 'Stop Sim' : 'Sim Racing';
   markerWrap.innerHTML = '';
   renderRaceDotsAtTime(0);
-
-  legend.innerHTML = simState.teamRuns.map((run, idx) => `
-    <span class="sim-legend-item">
-      <span class="sim-legend-dot" style="background:${run.team.color}"></span>
-      <span>P${idx + 1} · ${escHtml(run.tag)} (${escHtml(run.team.name)}) · ${Math.round(run.speedKmh)} km/h</span>
-    </span>
-  `).join('');
 }
 
 function startSimRacingAnimation() {
@@ -847,23 +886,37 @@ function startSimRacingAnimation() {
 
   simState.speed = SIM_DEFAULT_SPEED;
   simState.startTs = performance.now();
+  simState.lastTickTs = simState.startTs;
   simState.running = true;
   simState.teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
-  simState.teamRuns = buildSimTeamRuns(simState.teamsOnGrid);
+  simState.teamRuns = buildSimTeamRuns(simState.teamsOnGrid).map(run => ({
+    ...run,
+    currentDistance: -run.gridOffset,
+    currentPathSpeed: run.pathSpeed,
+    currentSpeedKmh: run.speedKmh,
+    ersBattery: SIM_ERS_BATTERY_START,
+    ersActive: false,
+    ersBoostKmh: 0,
+    gapAheadSec: null
+  }));
+  simState.lapLength = path.getTotalLength();
+  updateSimBrakeDistances(path, simState.lapLength);
 
   const btn = document.getElementById('btnSimRacing');
   if (btn) btn.textContent = 'Stop Sim';
 
-  setSimStatus('Simulation preview running. Speed is dynamically calculated from Team Setup & Driver Skills.');
-  renderRaceDotsAtTime(0);
-
-  const lapLength = path.getTotalLength();
+  setSimStatus('Simulation preview running. ERS deploy: gap < 3.000s, battery > 15%, with battery drain and recharge rules active.');
+  renderRaceDotsAtTime(0, simState.lapLength);
 
   const tick = now => {
     if (!simState.running) return;
 
+    const dtSec = Math.max(0, (now - simState.lastTickTs) / 1000);
+    simState.lastTickTs = now;
+    advanceSimRuns(dtSec, simState.lapLength);
+
     const elapsedSec = (now - simState.startTs) / 1000;
-    renderRaceDotsAtTime(elapsedSec, lapLength);
+    renderRaceDotsAtTime(elapsedSec, simState.lapLength);
 
     simState.rafId = requestAnimationFrame(tick);
   };
@@ -875,6 +928,7 @@ function stopSimRacingAnimation() {
   if (simState.rafId) cancelAnimationFrame(simState.rafId);
   simState.rafId = null;
   simState.running = false;
+  simState.lastTickTs = 0;
 
   const btn = document.getElementById('btnSimRacing');
   if (btn) btn.textContent = 'Sim Racing';
@@ -899,21 +953,266 @@ function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
 
   dotsLayer.innerHTML = runs.map(run => {
     const laneOffset = (run.laneIndex - laneCenter) * SIM_LANE_SPACING + run.uniqueLaneNudge;
-    const rawDistance = elapsedSec * run.pathSpeed - run.gridOffset;
+    const rawDistance = typeof run.currentDistance === 'number'
+      ? run.currentDistance
+      : (elapsedSec * run.pathSpeed - run.gridOffset);
     const wrappedDistance = ((rawDistance % lapLength) + lapLength) % lapLength;
     const point = getPointWithLaneOffset(path, wrappedDistance, laneOffset, lapLength);
     const teamTag = run.tag;
     const labelX = point.x + SIM_DOT_RADIUS + 3;
     const labelY = point.y - (SIM_DOT_RADIUS + 2);
+    const currentSpeed = run.currentSpeedKmh ?? run.speedKmh;
+    const battery = Math.max(0, Math.min(100, Number(run.ersBattery ?? SIM_ERS_BATTERY_START)));
+    const ersState = run.ersActive ? `ERS ON +${Math.round(run.ersBoostKmh || 0)} km/h` : 'ERS OFF';
 
     return `
       <g class="sim-race-marker">
-        <title>${escHtml(run.tag)} (${escHtml(run.team.name)}) · ${Math.round(run.speedKmh)} km/h</title>
+        <title>${escHtml(run.tag)} (${escHtml(run.team.name)}) · ${Math.round(currentSpeed)} km/h · ${ersState} · BAT ${battery.toFixed(1)}%</title>
         <circle class="sim-race-dot" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${SIM_DOT_RADIUS}" fill="${run.team.color}"></circle>
         <text class="sim-race-tag" x="${labelX.toFixed(2)}" y="${labelY.toFixed(2)}">${escHtml(teamTag)}</text>
       </g>
     `;
   }).join('');
+
+  renderSimDriverTiming(runs, elapsedSec, lapLength);
+}
+
+function getSimRunDisplayName(run) {
+  if (run.driver) return `${run.driver.first} ${run.driver.last}`;
+  return `${run.tag} (${run.team.name})`;
+}
+
+function renderSimDriverTiming(runs, elapsedSec, lapLength) {
+  const legend = document.getElementById('simTeamLegend');
+  if (!legend || !Array.isArray(runs) || runs.length === 0 || !lapLength) return;
+
+  const ordered = runs.map(run => {
+    const rawDistance = typeof run.currentDistance === 'number'
+      ? run.currentDistance
+      : (elapsedSec * run.pathSpeed - run.gridOffset);
+    return {
+      run,
+      rawDistance
+    };
+  }).sort((a, b) => b.rawDistance - a.rawDistance);
+
+  const leader = ordered[0];
+  const leaderSpeed = Math.max(leader.run.currentPathSpeed || leader.run.pathSpeed, 0.0001);
+
+  legend.innerHTML = ordered.map((entry, idx) => {
+    const gapDistance = leader.rawDistance - entry.rawDistance;
+    const gapSec = gapDistance / leaderSpeed;
+    const timing = idx === 0 ? 'Leader' : `+${gapSec.toFixed(3)}s`;
+    const lap = Math.max(1, Math.floor(entry.rawDistance / lapLength) + 1);
+    const runPathSpeed = Math.max(entry.run.currentPathSpeed || entry.run.pathSpeed, 0.0001);
+    const lapTime = lapLength / runPathSpeed;
+    const shownSpeed = Math.round(entry.run.currentSpeedKmh || entry.run.speedKmh);
+    const ersBattery = Math.max(0, Math.min(100, Number(entry.run.ersBattery ?? SIM_ERS_BATTERY_START)));
+    const ersLabel = entry.run.ersActive
+      ? `ERS ON (+${Math.round(entry.run.ersBoostKmh || 0)})`
+      : 'ERS OFF';
+
+    return `
+      <span class="sim-legend-item">
+        <span class="sim-legend-dot" style="background:${entry.run.team.color}"></span>
+        <span>P${idx + 1} · ${escHtml(entry.run.tag)} · ${escHtml(getSimRunDisplayName(entry.run))} · ${timing} · ${shownSpeed} km/h · BAT ${ersBattery.toFixed(1)}% · ${ersLabel} · L${lap} · ${lapTime.toFixed(2)}s/lap</span>
+      </span>
+    `;
+  }).join('');
+}
+
+function updateSimBrakeDistances(path, lapLength) {
+  if (!path || !lapLength) return;
+  simState.turn1Distance = findClosestDistanceOnPath(path, SIM_TURN1_MARKER.x, SIM_TURN1_MARKER.y, lapLength);
+  simState.turn2Distance = findClosestDistanceOnPath(path, SIM_TURN2_MARKER.x, SIM_TURN2_MARKER.y, lapLength);
+}
+
+function findClosestDistanceOnPath(path, targetX, targetY, lapLength) {
+  let bestDistance = 0;
+  let bestScore = Number.POSITIVE_INFINITY;
+  const samples = Math.max(600, Math.floor(lapLength * 2));
+
+  for (let i = 0; i <= samples; i++) {
+    const distance = (lapLength * i) / samples;
+    const p = path.getPointAtLength(distance);
+    const dx = p.x - targetX;
+    const dy = p.y - targetY;
+    const score = dx * dx + dy * dy;
+    if (score < bestScore) {
+      bestScore = score;
+      bestDistance = distance;
+    }
+  }
+
+  return bestDistance;
+}
+
+function isDistanceInsideWindow(distanceOnLap, centerDistance, halfWindow, lapLength) {
+  if (centerDistance == null || !lapLength) return false;
+  const diff = Math.abs(distanceOnLap - centerDistance);
+  const wrappedDiff = Math.min(diff, lapLength - diff);
+  return wrappedDiff <= halfWindow;
+}
+
+function getForwardDistanceOnLap(fromDistance, toDistance, lapLength) {
+  return ((toDistance - fromDistance) % lapLength + lapLength) % lapLength;
+}
+
+function applyTurnSpeedTarget(baseSpeedKmh, distanceOnLap, turnDistance, turnTargetSpeed, lapLength) {
+  if (turnDistance == null || !lapLength) return baseSpeedKmh;
+
+  let target = baseSpeedKmh;
+  const forwardToTurn = getForwardDistanceOnLap(distanceOnLap, turnDistance, lapLength);
+
+  // Start braking before the turn and reach entry speed right at the apex marker.
+  if (forwardToTurn <= SIM_BRAKE_PREP_DISTANCE) {
+    const t = Math.max(0, Math.min(1, forwardToTurn / SIM_BRAKE_PREP_DISTANCE));
+    const rampSpeed = turnTargetSpeed + (baseSpeedKmh - turnTargetSpeed) * t;
+    target = Math.min(target, rampSpeed);
+  }
+
+  // Hold entry speed around the apex to avoid immediate re-acceleration spike.
+  if (isDistanceInsideWindow(distanceOnLap, turnDistance, SIM_APEX_HOLD_WINDOW, lapLength)) {
+    target = Math.min(target, turnTargetSpeed);
+  }
+
+  return target;
+}
+
+function getBrakeTargetSpeedKmh(baseSpeedKmh, distanceOnLap, lapLength) {
+  let target = baseSpeedKmh;
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn1Distance, SIM_TURN1_ENTRY_KMH, lapLength);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn2Distance, SIM_TURN2_ENTRY_KMH, lapLength);
+  return target;
+}
+
+function normalizeErsDeployRating(value) {
+  const parsed = Number(value);
+  const fallback = CAR_STAT_DEFAULTS.ersDeploy;
+  const normalized = Number.isFinite(parsed) ? parsed : fallback;
+  return Math.min(SIM_POWER_UNIT_MAX, Math.max(1, normalized));
+}
+
+function clampSimBattery(value) {
+  return Math.max(0, Math.min(100, Number(value) || 0));
+}
+
+function getErsBoostKmh(ersDeployRating) {
+  const rating = normalizeErsDeployRating(ersDeployRating);
+  const boost = SIM_ERS_MAX_BOOST_KMH_AT_99 - (SIM_POWER_UNIT_MAX - rating) * SIM_ERS_BOOST_DROP_PER_POINT;
+  return Math.max(0, boost);
+}
+
+function getErsDrainRatePercentPerSec(ersDeployRating) {
+  const rating = normalizeErsDeployRating(ersDeployRating);
+  return SIM_ERS_DRAIN_AT_99_PER_SEC + (SIM_POWER_UNIT_MAX - rating) * SIM_ERS_DRAIN_ADD_PER_POINT_LOST;
+}
+
+function getErsChargeRatePercentPerSec(ersDeployRating) {
+  const rating = normalizeErsDeployRating(ersDeployRating);
+  if (rating >= SIM_ERS_CHARGE_REFERENCE) {
+    return SIM_ERS_CHARGE_AT_90_PER_SEC + (rating - SIM_ERS_CHARGE_REFERENCE) * SIM_ERS_CHARGE_ADD_PER_POINT_ABOVE_90;
+  }
+  return Math.max(0, SIM_ERS_CHARGE_AT_90_PER_SEC - (SIM_ERS_CHARGE_REFERENCE - rating) * SIM_ERS_CHARGE_DROP_PER_POINT_BELOW_90);
+}
+
+function getRequiredBrakeDecelKmhPerSec(currentSpeedKmh, distanceOnLap, currentPathSpeed, lapLength) {
+  const constraints = [
+    { turnDistance: simState.turn1Distance, targetSpeed: SIM_TURN1_ENTRY_KMH },
+    { turnDistance: simState.turn2Distance, targetSpeed: SIM_TURN2_ENTRY_KMH }
+  ];
+
+  let requiredDecel = 0;
+
+  constraints.forEach(({ turnDistance, targetSpeed }) => {
+    if (turnDistance == null) return;
+
+    const distanceToTurn = getForwardDistanceOnLap(distanceOnLap, turnDistance, lapLength);
+    if (distanceToTurn > SIM_BRAKE_PREP_DISTANCE) return;
+    if (currentSpeedKmh <= targetSpeed) return;
+
+    const timeToTurn = distanceToTurn / Math.max(currentPathSpeed, 0.05);
+    const neededDecel = (currentSpeedKmh - targetSpeed) / Math.max(timeToTurn, 0.05);
+    requiredDecel = Math.max(requiredDecel, neededDecel * 1.1);
+  });
+
+  return requiredDecel;
+}
+
+function advanceSimRuns(dtSec, lapLength) {
+  if (!dtSec || dtSec <= 0 || !lapLength || !Array.isArray(simState.teamRuns)) return;
+
+  const orderedRuns = simState.teamRuns
+    .slice()
+    .sort((a, b) => {
+      const distA = typeof a.currentDistance === 'number' ? a.currentDistance : -a.gridOffset;
+      const distB = typeof b.currentDistance === 'number' ? b.currentDistance : -b.gridOffset;
+      return distB - distA;
+    });
+
+  const gapAheadSecByRun = new Map();
+  orderedRuns.forEach((run, idx) => {
+    if (idx === 0) {
+      gapAheadSecByRun.set(run, Number.POSITIVE_INFINITY);
+      return;
+    }
+
+    const ahead = orderedRuns[idx - 1];
+    const runDistance = typeof run.currentDistance === 'number' ? run.currentDistance : -run.gridOffset;
+    const aheadDistance = typeof ahead.currentDistance === 'number' ? ahead.currentDistance : -ahead.gridOffset;
+    const gapDistance = Math.max(0, aheadDistance - runDistance);
+    const speedRef = Math.max(run.currentPathSpeed || run.pathSpeed, 0.05);
+    gapAheadSecByRun.set(run, gapDistance / speedRef);
+  });
+
+  simState.teamRuns.forEach(run => {
+    if (typeof run.currentDistance !== 'number') {
+      run.currentDistance = -run.gridOffset;
+    }
+
+    const ersDeployRating = normalizeErsDeployRating(run.ersDeployRating);
+    const currentBattery = clampSimBattery(run.ersBattery ?? SIM_ERS_BATTERY_START);
+    const gapAheadSec = gapAheadSecByRun.get(run);
+    const shouldDeployErs =
+      Number.isFinite(gapAheadSec) &&
+      gapAheadSec <= SIM_ERS_DEPLOY_GAP_SEC &&
+      currentBattery > SIM_ERS_MIN_BATTERY_TO_DEPLOY;
+
+    const ersBoostKmh = shouldDeployErs ? getErsBoostKmh(ersDeployRating) : 0;
+    const baseSpeedWithErs = run.speedKmh + ersBoostKmh;
+    const wrappedDistance = ((run.currentDistance % lapLength) + lapLength) % lapLength;
+    const targetSpeedKmh = getBrakeTargetSpeedKmh(baseSpeedWithErs, wrappedDistance, lapLength);
+
+    const currentSpeed = typeof run.currentSpeedKmh === 'number' ? run.currentSpeedKmh : run.speedKmh;
+    const referencePathSpeed = Math.max(run.currentPathSpeed || run.pathSpeed, 0.05);
+    const adaptiveDecel = getRequiredBrakeDecelKmhPerSec(currentSpeed, wrappedDistance, referencePathSpeed, lapLength);
+    const decelRate = Math.max(SIM_BRAKE_DECEL_KMH_PER_SEC, adaptiveDecel);
+    const decelStep = decelRate * dtSec;
+    const accelStep = SIM_ACCEL_KMH_PER_SEC * dtSec;
+
+    let nextSpeed = currentSpeed;
+    if (targetSpeedKmh < currentSpeed) {
+      nextSpeed = Math.max(targetSpeedKmh, currentSpeed - decelStep);
+    } else if (targetSpeedKmh > currentSpeed) {
+      nextSpeed = Math.min(targetSpeedKmh, currentSpeed + accelStep);
+    }
+
+    let nextBattery = currentBattery;
+    if (shouldDeployErs) {
+      nextBattery -= getErsDrainRatePercentPerSec(ersDeployRating) * dtSec;
+    } else {
+      nextBattery += getErsChargeRatePercentPerSec(ersDeployRating) * dtSec;
+    }
+    nextBattery = clampSimBattery(nextBattery);
+
+    run.currentSpeedKmh = nextSpeed;
+    run.currentPathSpeed = (nextSpeed / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed;
+    run.currentDistance += run.currentPathSpeed * dtSec;
+    run.ersBattery = nextBattery;
+    run.ersActive = shouldDeployErs && nextBattery > SIM_ERS_MIN_BATTERY_TO_DEPLOY;
+    run.ersBoostKmh = run.ersActive ? ersBoostKmh : 0;
+    run.gapAheadSec = Number.isFinite(gapAheadSec) ? gapAheadSec : null;
+  });
 }
 
 function buildSimTeamRuns(teamsOnGrid) {
@@ -941,19 +1240,36 @@ function buildSimTeamRuns(teamsOnGrid) {
     const team = runObj.team;
     const setup = normalizeCarSetup(team.carSetup);
     const pu = Math.min(SIM_POWER_UNIT_MAX, Math.max(1, Number(setup.powerUnit) || CAR_STAT_DEFAULTS.powerUnit));
-    
-    const carOverall = getCarOverall(setup);
-    let finalRating = carOverall;
+    const ersDeployRating = normalizeErsDeployRating(setup.ersDeploy);
 
-    if (runObj.driver && runObj.driver.skills) {
-        const driverSkills = getComputedSkills(runObj.driver.skills);
-        // Combine 60% car efficiency and 40% driver overall skill (with a tiny bonus for racecraft)
-        finalRating = (carOverall * 0.6) + (driverSkills.overall * 0.35) + (driverSkills.racecraft * 0.05);
+    // Base speed from PU:
+    // PU 99 => 370 km/h, each lost PU point => -2 km/h.
+    // For PU below 90, each additional lost point (under 90) => -3 km/h.
+    let speedKmh;
+    if (pu >= 90) {
+      speedKmh = SIM_MAX_SPEED_KMH - (SIM_POWER_UNIT_MAX - pu) * 2;
+    } else {
+      const speedAtPu90 = SIM_MAX_SPEED_KMH - (SIM_POWER_UNIT_MAX - 90) * 2;
+      speedKmh = speedAtPu90 - (90 - pu) * 3;
     }
-    
-    // Scale rating to realistic KM/H: max 350 for 100 rating
-    let speedKmh = SIM_MAX_SPEED_KMH - (100 - Math.min(100, finalRating)) * 1.8;
-    speedKmh += (idx % 2 === 0 ? 0.3 : -0.3); // microscopic variance to prevent identical speeds
+
+    let driverBonus = 0;
+    if (runObj.driver && runObj.driver.skills) {
+      const { overall } = getComputedSkills(runObj.driver.skills);
+      if (overall > 90) driverBonus = 5;
+      else if (overall > 85) driverBonus = 3;
+      else if (overall > 80) driverBonus = 2;
+    }
+
+    speedKmh += driverBonus;
+
+    return {
+      team,
+      driver: runObj.driver || null,
+      tag: runObj.tag,
+      powerUnit: pu,
+      ersDeployRating,
+      speedKmh,
       pathSpeed: (speedKmh / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed,
       laneIndex: idx % SIM_LANE_COUNT,
       gridOffset: Math.floor(idx / SIM_LANE_COUNT) * SIM_ROW_GAP,
