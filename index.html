@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sim Racing Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -200,6 +203,12 @@
                 <label for="teamName">Team Name <span class="required">*</span></label>
                 <input type="text" id="teamName" placeholder="e.g. Red Racing Team" maxlength="50" />
                 <span class="field-error" id="err-teamName"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="teamTag">Short Tag (optional)</label>
+                <input type="text" id="teamTag" placeholder="e.g. FER" maxlength="5" />
+                <span class="field-error" id="err-teamTag"></span>
               </div>
 
               <div class="form-group">
@@ -424,8 +433,8 @@
           </div>
 
           <div class="monza-track-wrap" id="monzaTrackWrap">
-            <svg class="monza-track" viewBox="0 0 800 450" aria-label="Monza track preview" role="img">
-              <rect width="800" height="450" fill="white" />
+            <svg class="monza-track" viewBox="-20 0 860 450" aria-label="Monza track preview" role="img">
+              <rect x="-20" y="0" width="860" height="450" fill="white" />
 
               <path d="M 760 372 L 580 372 C 570 372 560 375 550 378 L 415 378" fill="none" stroke="#bdc3c7" stroke-width="4" />
               <text x="760" y="365" font-family="Arial" font-size="12" font-weight="bold" text-anchor="end">PIT IN</text>

@@ -1,0 +1,11 @@
+teamSeedId;teamName;carModel;powerUnit;downforce;chassis;reliability;ersDeploy;tyreDegradation;notes
+alpine;BWT Alpine F1 Team;A525;78;77;71;75;86;41;
+aston-martin;Aston Martin Aramco F1 Team;AMR25;82;78;86;81;88;27;
+ferrari;Scuderia Ferrari HP;SF-25;85;83;89;92;90;20;
+haas;MoneyGram Haas F1 Team;VF-25;83;81;77;86;78;26;
+sauber;Stake F1 Team Kick Sauber;C45;82;78;81;77;82;36;
+mclaren;McLaren Formula 1 Team;MCL39;90;95;96;90;85;15;
+mercedes;Mercedes-AMG Petronas F1 Team;F1 W16;95;87;91;97;90;35;
+racing-bulls;Visa Cash App Racing Bulls F1 Team;VCARB 02;86;82;83;90;92;35;
+red-bull;Oracle Red Bull Racing;RB21;93;92;93;95;92;25;
+williams;Atlassian Williams Racing;FW47;91;83;86;82;87;31;

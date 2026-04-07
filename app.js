@@ -27,6 +27,67 @@ const CHAMPIONSHIPS = {
   }
 };
 
+const DEFAULT_TEAMS_BY_CHAMP = {
+  f1: [
+    { seedId: 'alpine', name: 'BWT Alpine F1 Team', country: 'France', car: 'A525', category: 'F1', color: '#0090ff', budget: 470, carSetup: { powerUnit: 78, downforce: 77, chassis: 71, reliability: 75, ersDeploy: 86, tyreDegradation: 41 } },
+    { seedId: 'aston-martin', name: 'Aston Martin Aramco F1 Team', country: 'United Kingdom', car: 'AMR25', category: 'F1', color: '#006f62', budget: 520, carSetup: { powerUnit: 82, downforce: 78, chassis: 86, reliability: 81, ersDeploy: 88, tyreDegradation: 27 } },
+    { seedId: 'ferrari', name: 'Scuderia Ferrari HP', country: 'Italy', car: 'SF-25', category: 'F1', color: '#e10600', budget: 680, carSetup: { powerUnit: 85, downforce: 83, chassis: 89, reliability: 92, ersDeploy: 90, tyreDegradation: 20 } },
+    { seedId: 'haas', name: 'MoneyGram Haas F1 Team', country: 'United States', car: 'VF-25', category: 'F1', color: '#b6babd', budget: 310, carSetup: { powerUnit: 83, downforce: 81, chassis: 77, reliability: 86, ersDeploy: 78, tyreDegradation: 26 } },
+    { seedId: 'sauber', name: 'Stake F1 Team Kick Sauber', country: 'Switzerland', car: 'C45', category: 'F1', color: '#00e701', budget: 300, carSetup: { powerUnit: 82, downforce: 78, chassis: 81, reliability: 77, ersDeploy: 82, tyreDegradation: 36 } },
+    { seedId: 'mclaren', name: 'McLaren Formula 1 Team', country: 'United Kingdom', car: 'MCL39', category: 'F1', color: '#ff8700', budget: 640, carSetup: { powerUnit: 90, downforce: 95, chassis: 96, reliability: 90, ersDeploy: 85, tyreDegradation: 15 } },
+    { seedId: 'mercedes', name: 'Mercedes-AMG Petronas F1 Team', country: 'Germany', car: 'F1 W16', category: 'F1', color: '#00d2be', budget: 630, carSetup: { powerUnit: 95, downforce: 87, chassis: 91, reliability: 97, ersDeploy: 90, tyreDegradation: 35 } },
+    { seedId: 'racing-bulls', name: 'Visa Cash App Racing Bulls F1 Team', country: 'Italy', car: 'VCARB 02', category: 'F1', color: '#2b5db7', budget: 360, carSetup: { powerUnit: 86, downforce: 82, chassis: 83, reliability: 90, ersDeploy: 92, tyreDegradation: 35 } },
+    { seedId: 'red-bull', name: 'Oracle Red Bull Racing', country: 'Austria', car: 'RB21', category: 'F1', color: '#1e41ff', budget: 700, carSetup: { powerUnit: 93, downforce: 92, chassis: 93, reliability: 95, ersDeploy: 92, tyreDegradation: 25 } },
+    { seedId: 'williams', name: 'Atlassian Williams Racing', country: 'United Kingdom', car: 'FW47', category: 'F1', color: '#005aff', budget: 390, carSetup: { powerUnit: 91, downforce: 83, chassis: 86, reliability: 82, ersDeploy: 87, tyreDegradation: 31 } }
+  ],
+  wec: [
+    { seedId: 'titan-hypercar', name: 'Titan Hypercar', country: 'Japan', car: 'TH-01H', category: 'Hypercar', color: '#0066cc', budget: 420 },
+    { seedId: 'enduro-proton', name: 'Enduro Proton', country: 'Germany', car: 'EP-LMP2', category: 'LMP2', color: '#1f95ff', budget: 260 },
+    { seedId: 'crimson-lemans', name: 'Crimson LeMans', country: 'Italy', car: 'CL-GTE', category: 'GTE Pro', color: '#d7263d', budget: 310 }
+  ],
+  gt: [
+    { seedId: 'night-owl', name: 'Night Owl Motorsport', country: 'Belgium', car: 'NOM GT3', category: 'GT3', color: '#00a651', budget: 180 },
+    { seedId: 'velocity-garage', name: 'Velocity Garage', country: 'United States', car: 'VG GT4', category: 'GT4', color: '#19bf6a', budget: 145 },
+    { seedId: 'sunset-dynamics', name: 'Sunset Dynamics', country: 'Spain', car: 'SD GT2', category: 'GT2', color: '#f39c12', budget: 170 }
+  ]
+};
+
+const DEFAULT_DRIVERS_BY_CHAMP = {
+  f1: [
+    { seedId: 'gasly', first: 'Pierre', last: 'Gasly', number: 10, nationality: 'French', teamSeedId: 'alpine', skills: { cornering: 83, braking: 84, reactions: 85, accuracy: 75, control: 89, smooth: 76, adaptability: 81, overtaking: 87, defending: 82 } },
+    { seedId: 'colapinto', first: 'Franco', last: 'Colapinto', number: 7, nationality: 'Australian', teamSeedId: 'alpine', skills: { cornering: 78, braking: 77, reactions: 75, accuracy: 86, control: 81, smooth: 72, adaptability: 85, overtaking: 86, defending: 85 } },
+
+    { seedId: 'alonso', first: 'Fernando', last: 'Alonso', number: 14, nationality: 'Spanish', teamSeedId: 'aston-martin', skills: { cornering: 85, braking: 81, reactions: 80, accuracy: 89, control: 95, smooth: 96, adaptability: 82, overtaking: 83, defending: 95 } },
+    { seedId: 'stroll', first: 'Lance', last: 'Stroll', number: 18, nationality: 'Canadian', teamSeedId: 'aston-martin', skills: { cornering: 81, braking: 78, reactions: 77, accuracy: 85, control: 82, smooth: 80, adaptability: 85, overtaking: 78, defending: 77 } },
+
+    { seedId: 'leclerc', first: 'Charles', last: 'Leclerc', number: 16, nationality: 'Monegasque', teamSeedId: 'ferrari', skills: { cornering: 93, braking: 89, reactions: 92, accuracy: 91, control: 90, smooth: 85, adaptability: 90, overtaking: 91, defending: 85 } },
+    { seedId: 'hamilton', first: 'Lewis', last: 'Hamilton', number: 44, nationality: 'British', teamSeedId: 'ferrari', skills: { cornering: 87, braking: 93, reactions: 82, accuracy: 95, control: 96, smooth: 88, adaptability: 83, overtaking: 85, defending: 90 } },
+
+    { seedId: 'ocon', first: 'Esteban', last: 'Ocon', number: 31, nationality: 'French', teamSeedId: 'haas', skills: { cornering: 80, braking: 75, reactions: 81, accuracy: 88, control: 82, smooth: 81, adaptability: 73, overtaking: 78, defending: 88 } },
+    { seedId: 'bearman', first: 'Oliver', last: 'Bearman', number: 87, nationality: 'British', teamSeedId: 'haas', skills: { cornering: 84, braking: 83, reactions: 78, accuracy: 85, control: 86, smooth: 75, adaptability: 78, overtaking: 89, defending: 81 } },
+
+    { seedId: 'bortoleto', first: 'Gabriel', last: 'Bortoleto', number: 5, nationality: 'Brazilian', teamSeedId: 'sauber', skills: { cornering: 80, braking: 81, reactions: 73, accuracy: 72, control: 88, smooth: 78, adaptability: 79, overtaking: 85, defending: 89 } },
+    { seedId: 'hulkenberg', first: 'Nico', last: 'Hulkenberg', number: 27, nationality: 'German', teamSeedId: 'sauber', skills: { cornering: 82, braking: 78, reactions: 85, accuracy: 80, control: 81, smooth: 82, adaptability: 72, overtaking: 76, defending: 93 } },
+
+    { seedId: 'norris', first: 'Lando', last: 'Norris', number: 4, nationality: 'British', teamSeedId: 'mclaren', skills: { cornering: 88, braking: 85, reactions: 92, accuracy: 93, control: 94, smooth: 92, adaptability: 87, overtaking: 91, defending: 93 } },
+    { seedId: 'piastri', first: 'Oscar', last: 'Piastri', number: 81, nationality: 'Australian', teamSeedId: 'mclaren', skills: { cornering: 85, braking: 87, reactions: 94, accuracy: 95, control: 90, smooth: 87, adaptability: 83, overtaking: 96, defending: 82 } },
+
+    { seedId: 'antonelli', first: 'Kimi', last: 'Antonelli', number: 12, nationality: 'Italian', teamSeedId: 'mercedes', skills: { cornering: 86, braking: 83, reactions: 86, accuracy: 78, control: 75, smooth: 71, adaptability: 81, overtaking: 92, defending: 82 } },
+    { seedId: 'russell', first: 'George', last: 'Russell', number: 63, nationality: 'British', teamSeedId: 'mercedes', skills: { cornering: 88, braking: 89, reactions: 81, accuracy: 92, control: 93, smooth: 90, adaptability: 85, overtaking: 89, defending: 94 } },
+
+    { seedId: 'hadjar', first: 'Isack', last: 'Hadjar', number: 6, nationality: 'French', teamSeedId: 'racing-bulls', skills: { cornering: 87, braking: 81, reactions: 88, accuracy: 76, control: 77, smooth: 73, adaptability: 79, overtaking: 88, defending: 85 } },
+    { seedId: 'lawson', first: 'Liam', last: 'Lawson', number: 30, nationality: 'New Zealander', teamSeedId: 'racing-bulls', skills: { cornering: 82, braking: 78, reactions: 83, accuracy: 81, control: 82, smooth: 83, adaptability: 75, overtaking: 82, defending: 88 } },
+
+    { seedId: 'verstappen', first: 'Max', last: 'Verstappen', number: 1, nationality: 'Dutch', teamSeedId: 'red-bull', skills: { cornering: 95, braking: 96, reactions: 90, accuracy: 87, control: 94, smooth: 82, adaptability: 98, overtaking: 96, defending: 93 } },
+    { seedId: 'tsunoda', first: 'Yuki', last: 'Tsunoda', number: 22, nationality: 'Japanese', teamSeedId: 'red-bull', skills: { cornering: 85, braking: 80, reactions: 87, accuracy: 75, control: 70, smooth: 87, adaptability: 83, overtaking: 80, defending: 89 } },
+
+    { seedId: 'albon', first: 'Alexander', last: 'Albon', number: 23, nationality: 'Thai', teamSeedId: 'williams', skills: { cornering: 82, braking: 81, reactions: 90, accuracy: 88, control: 82, smooth: 84, adaptability: 80, overtaking: 86, defending: 81 } },
+    { seedId: 'sainz', first: 'Carlos', last: 'Sainz Jr.', number: 55, nationality: 'Spanish', teamSeedId: 'williams', skills: { cornering: 90, braking: 85, reactions: 89, accuracy: 85, control: 86, smooth: 96, adaptability: 78, overtaking: 82, defending: 87 } }
+  ],
+  wec: [],
+  gt: []
+};
+
 let currentChampionship = null;
 
 // ---------- Logo data (base64) for current form session ----------
@@ -34,6 +95,8 @@ let teamLogoData    = null;
 let teamCarPhotoData = null;
 let driverPhotoData  = null;
 let editingTeamCarSetup = null;
+let editingTeamSeedKey = null;
+let editingDriverSeedKey = null;
 
 const CAR_STAT_DEFAULTS = {
   powerUnit: 75,
@@ -46,14 +109,22 @@ const CAR_STAT_DEFAULTS = {
 
 const SIM_DEFAULT_SPEED = 1;
 const SIM_BASE_PATH_SPEED = 90;
-const SIM_DOT_GAP = 26;
+const SIM_MAX_SPEED_KMH = 350;
+const SIM_POWER_UNIT_MAX = 99;
+const SIM_KMH_DROP_PER_PU = 2;
+const SIM_MAX_TEAMS_ON_TRACK = 10;
+const SIM_LANE_COUNT = 3;
+const SIM_LANE_SPACING = 2.4;
+const SIM_ROW_GAP = 34;
+const SIM_DOT_RADIUS = 2.4;
 
 const simState = {
   running: false,
   rafId: null,
   startTs: 0,
   speed: SIM_DEFAULT_SPEED,
-  teamsOnGrid: []
+  teamsOnGrid: [],
+  teamRuns: []
 };
 
 // ---------- State ----------
@@ -159,9 +230,185 @@ function loadFromStorage() {
     Object.assign(state, parsed);
     state.teams = state.teams.map(team => ({
       ...team,
+      shortTag: normalizeTeamTag(team.shortTag) || null,
       carSetup: normalizeCarSetup(team.carSetup)
     }));
   }
+
+  // Ensure IDs continue correctly even if schema changed between code versions.
+  const maxTeamId = state.teams.reduce((max, t) => Math.max(max, Number(t.id) || 0), 0);
+  const maxDriverId = state.drivers.reduce((max, d) => Math.max(max, Number(d.id) || 0), 0);
+  state.nextTeamId = Math.max(Number(state.nextTeamId) || 1, maxTeamId + 1);
+  state.nextDriverId = Math.max(Number(state.nextDriverId) || 1, maxDriverId + 1);
+
+  // Seed defaults safely: only add missing defaults, never overwrite user saves.
+  const teamsSeeded = ensureDefaultTeams();
+  const driversSeeded = ensureDefaultDrivers();
+  if (teamsSeeded || driversSeeded) saveToStorage();
+}
+
+function ensureDefaultTeams() {
+  const defaults = DEFAULT_TEAMS_BY_CHAMP[currentChampionship] || [];
+  let changed = false;
+
+  // Migrate legacy seeded defaults that used index-based seed keys.
+  const legacySeedKeyPattern = new RegExp(`^default:${currentChampionship}:\\d+$`);
+  const beforeCount = state.teams.length;
+  state.teams = state.teams.filter(t => !(typeof t.seedKey === 'string' && legacySeedKeyPattern.test(t.seedKey)));
+  if (state.teams.length !== beforeCount) changed = true;
+
+  defaults.forEach((team, idx) => {
+    const fallbackSeedId = String(team.name || `team-${idx}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    const seedId = team.seedId || fallbackSeedId || `team-${idx}`;
+    const seedKey = `default:${currentChampionship}:${seedId}`;
+    const seededTeam = state.teams.find(t => t.seedKey === seedKey);
+    if (seededTeam) {
+      const normalizedExistingTag = normalizeTeamTag(seededTeam.shortTag);
+      if (!normalizedExistingTag) {
+        seededTeam.shortTag = normalizeTeamTag(team.shortTag || getTeamTag(team.name)) || null;
+        changed = true;
+      }
+
+      if (isUntouchedDefaultCarSetup(seededTeam.carSetup)) {
+        seededTeam.name = team.name;
+        seededTeam.country = team.country;
+        seededTeam.car = team.car;
+        seededTeam.category = team.category;
+        seededTeam.color = team.color;
+        seededTeam.budget = team.budget ?? null;
+        seededTeam.carSetup = normalizeCarSetup(team.carSetup);
+        changed = true;
+      }
+      return;
+    }
+
+    const exists = state.teams.some(t =>
+      t.seedKey === seedKey ||
+      (String(t.name).toLowerCase() === String(team.name).toLowerCase() &&
+       String(t.country).toLowerCase() === String(team.country).toLowerCase())
+    );
+
+    if (!exists) {
+      state.teams.push({
+        id: state.nextTeamId++,
+        name: team.name,
+        country: team.country,
+        car: team.car,
+        category: team.category,
+        color: team.color,
+        budget: team.budget ?? null,
+        logo: null,
+        carPhoto: null,
+        shortTag: normalizeTeamTag(team.shortTag || getTeamTag(team.name)) || null,
+        carSetup: normalizeCarSetup(team.carSetup),
+        createdAt: new Date().toISOString(),
+        seedKey
+      });
+      changed = true;
+    }
+  });
+
+  return changed;
+}
+
+function getDefaultDriverSkills() {
+  return {
+    cornering: 75,
+    braking: 75,
+    reactions: 75,
+    accuracy: 75,
+    control: 75,
+    smooth: 75,
+    adaptability: 75,
+    overtaking: 75,
+    defending: 75
+  };
+}
+
+function normalizeDriverSkills(skills) {
+  const fallback = getDefaultDriverSkills();
+  const src = skills || {};
+  return {
+    cornering: Number(src.cornering) || fallback.cornering,
+    braking: Number(src.braking) || fallback.braking,
+    reactions: Number(src.reactions) || fallback.reactions,
+    accuracy: Number(src.accuracy) || fallback.accuracy,
+    control: Number(src.control) || fallback.control,
+    smooth: Number(src.smooth) || fallback.smooth,
+    adaptability: Number(src.adaptability) || fallback.adaptability,
+    overtaking: Number(src.overtaking) || fallback.overtaking,
+    defending: Number(src.defending) || fallback.defending
+  };
+}
+
+function isUntouchedDefaultSkills(skills) {
+  const normalized = normalizeDriverSkills(skills);
+  return Object.values(normalized).every(v => v === 75);
+}
+
+function ensureDefaultDrivers() {
+  const defaults = DEFAULT_DRIVERS_BY_CHAMP[currentChampionship] || [];
+  let changed = false;
+
+  const legacySeedKeyPattern = new RegExp(`^default-driver:${currentChampionship}:\\d+$`);
+  const beforeCount = state.drivers.length;
+  state.drivers = state.drivers.filter(d => !(typeof d.seedKey === 'string' && legacySeedKeyPattern.test(d.seedKey)));
+  if (state.drivers.length !== beforeCount) changed = true;
+
+  defaults.forEach((driver, idx) => {
+    const fallbackSeedId = `${driver.first}-${driver.last}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    const seedId = driver.seedId || fallbackSeedId || `driver-${idx}`;
+    const seedKey = `default-driver:${currentChampionship}:${seedId}`;
+    const teamSeedKey = `default:${currentChampionship}:${driver.teamSeedId}`;
+    const team = state.teams.find(t => t.seedKey === teamSeedKey);
+    if (!team) return;
+
+    const seededDriver = state.drivers.find(d => d.seedKey === seedKey);
+    if (seededDriver) {
+      if (isUntouchedDefaultSkills(seededDriver.skills)) {
+        seededDriver.first = driver.first;
+        seededDriver.last = driver.last;
+        seededDriver.number = Number(driver.number);
+        seededDriver.nationality = driver.nationality;
+        seededDriver.teamId = String(team.id);
+        seededDriver.skills = normalizeDriverSkills(driver.skills);
+        changed = true;
+      }
+      return;
+    }
+
+    const exists = state.drivers.some(d =>
+      d.seedKey === seedKey ||
+      (String(d.first).toLowerCase() === String(driver.first).toLowerCase() &&
+       String(d.last).toLowerCase() === String(driver.last).toLowerCase() &&
+       String(d.teamId) === String(team.id))
+    );
+
+    if (!exists) {
+      state.drivers.push({
+        id: state.nextDriverId++,
+        first: driver.first,
+        last: driver.last,
+        number: Number(driver.number),
+        nationality: driver.nationality,
+        teamId: String(team.id),
+        age: null,
+        skills: normalizeDriverSkills(driver.skills),
+        photo: null,
+        createdAt: new Date().toISOString(),
+        seedKey
+      });
+      changed = true;
+    }
+  });
+
+  return changed;
 }
 
 function normalizeCarSetup(setup) {
@@ -173,6 +420,18 @@ function normalizeCarSetup(setup) {
     ersDeploy: Number(setup?.ersDeploy) || CAR_STAT_DEFAULTS.ersDeploy,
     tyreDegradation: Number(setup?.tyreDegradation) || CAR_STAT_DEFAULTS.tyreDegradation
   };
+}
+
+function isUntouchedDefaultCarSetup(setup) {
+  const normalized = normalizeCarSetup(setup);
+  return (
+    normalized.powerUnit === CAR_STAT_DEFAULTS.powerUnit &&
+    normalized.downforce === CAR_STAT_DEFAULTS.downforce &&
+    normalized.chassis === CAR_STAT_DEFAULTS.chassis &&
+    normalized.reliability === CAR_STAT_DEFAULTS.reliability &&
+    normalized.ersDeploy === CAR_STAT_DEFAULTS.ersDeploy &&
+    normalized.tyreDegradation === CAR_STAT_DEFAULTS.tyreDegradation
+  );
 }
 
 
@@ -293,9 +552,18 @@ function initTeamForm() {
     document.getElementById('teamCarPhotoUrl').value = '';
   });
 
+  const teamTagInput = document.getElementById('teamTag');
+  if (teamTagInput) {
+    teamTagInput.addEventListener('input', () => {
+      teamTagInput.value = normalizeTeamTag(teamTagInput.value);
+    });
+  }
+
   document.getElementById('teamForm').addEventListener('submit', e => {
     e.preventDefault();
     if (!validateTeamForm()) return;
+
+    const normalizedTag = normalizeTeamTag(getValue('teamTag'));
 
     const team = {
       id: state.nextTeamId++,
@@ -307,7 +575,9 @@ function initTeamForm() {
       budget:   parseFloat(getValue('teamBudget')) || null,
       logo:     teamLogoData,
       carPhoto: teamCarPhotoData,
+      shortTag: normalizedTag.length >= 2 ? normalizedTag : null,
       carSetup: normalizeCarSetup(editingTeamCarSetup),
+      seedKey:  editingTeamSeedKey,
       createdAt: new Date().toISOString()
     };
 
@@ -315,6 +585,7 @@ function initTeamForm() {
     teamLogoData = null;
     teamCarPhotoData = null;
     editingTeamCarSetup = null;
+    editingTeamSeedKey = null;
     addActivity('team', `Team <strong>${team.name}</strong> added`);
     saveToStorage();
     renderAll();
@@ -344,6 +615,27 @@ function validateTeamForm() {
       el.style.borderColor = '';
     }
   });
+
+  const teamTagEl = document.getElementById('teamTag');
+  const tagErrEl = document.getElementById('err-teamTag');
+  if (teamTagEl && tagErrEl) {
+    const rawTag = teamTagEl.value.trim();
+    if (rawTag) {
+      const normalizedTag = normalizeTeamTag(rawTag);
+      if (normalizedTag.length < 2) {
+        tagErrEl.textContent = 'Short tag must be 2-5 letters/numbers';
+        teamTagEl.style.borderColor = '#ff5252';
+        valid = false;
+      } else {
+        teamTagEl.value = normalizedTag;
+        tagErrEl.textContent = '';
+        teamTagEl.style.borderColor = '';
+      }
+    } else {
+      tagErrEl.textContent = '';
+      teamTagEl.style.borderColor = '';
+    }
+  }
 
   return valid;
 }
@@ -404,12 +696,14 @@ function initDriverForm() {
         overtaking:   parseInt(document.getElementById('skillOvertaking').value),
         defending:    parseInt(document.getElementById('skillDefending').value)
       },
+      seedKey: editingDriverSeedKey,
       photo: driverPhotoData,
       createdAt: new Date().toISOString()
     };
 
     state.drivers.push(driver);
     driverPhotoData = null;
+    editingDriverSeedKey = null;
     addActivity('driver', `Driver <strong>${driver.first} ${driver.last}</strong> added`);
     saveToStorage();
     renderAll();
@@ -529,19 +823,20 @@ function renderSimRacingPreview() {
   }
 
   if (!simState.running) {
-    status.textContent = 'Monza preview is ready. Click Sim Racing to run team dots at 1x speed.';
+    status.textContent = `Monza preview is ready. Speed is based on Power Unit (${SIM_POWER_UNIT_MAX} => ${SIM_MAX_SPEED_KMH} km/h).`;
   }
 
-  const teamsOnGrid = state.teams.slice(0, 2);
+  const teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
   simState.teamsOnGrid = teamsOnGrid;
+  simState.teamRuns = buildSimTeamRuns(teamsOnGrid);
   btn.textContent = simState.running ? 'Stop Sim' : 'Sim Racing';
   markerWrap.innerHTML = '';
-  renderRaceDotsAtDistance(0);
+  renderRaceDotsAtTime(0);
 
-  legend.innerHTML = teamsOnGrid.map((team, idx) => `
+  legend.innerHTML = simState.teamRuns.map((run, idx) => `
     <span class="sim-legend-item">
-      <span class="sim-legend-dot" style="background:${team.color}"></span>
-      <span>P${idx + 1} · ${escHtml(team.name)}</span>
+      <span class="sim-legend-dot" style="background:${run.team.color}"></span>
+      <span>P${idx + 1} · ${escHtml(run.team.name)} · ${Math.round(run.speedKmh)} km/h</span>
     </span>
   `).join('');
 }
@@ -553,13 +848,14 @@ function startSimRacingAnimation() {
   simState.speed = SIM_DEFAULT_SPEED;
   simState.startTs = performance.now();
   simState.running = true;
-  simState.teamsOnGrid = state.teams.slice(0, 2);
+  simState.teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
+  simState.teamRuns = buildSimTeamRuns(simState.teamsOnGrid);
 
   const btn = document.getElementById('btnSimRacing');
   if (btn) btn.textContent = 'Stop Sim';
 
-  setSimStatus('Simulation preview running at 1x speed.');
-  renderRaceDotsAtDistance(0);
+  setSimStatus('Simulation preview running. Cars use speed from Power Unit and can overtake.');
+  renderRaceDotsAtTime(0);
 
   const lapLength = path.getTotalLength();
 
@@ -567,8 +863,7 @@ function startSimRacingAnimation() {
     if (!simState.running) return;
 
     const elapsedSec = (now - simState.startTs) / 1000;
-    const traveled = elapsedSec * SIM_BASE_PATH_SPEED * simState.speed;
-    renderRaceDotsAtDistance(traveled, lapLength);
+    renderRaceDotsAtTime(elapsedSec, lapLength);
 
     simState.rafId = requestAnimationFrame(tick);
   };
@@ -585,26 +880,112 @@ function stopSimRacingAnimation() {
   if (btn) btn.textContent = 'Sim Racing';
 }
 
-function renderRaceDotsAtDistance(distance, cachedLapLength) {
+function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
   const path = document.getElementById('monzaRaceLine');
   const dotsLayer = document.getElementById('monzaRaceDots');
   if (!path || !dotsLayer) return;
 
-  const teams = simState.teamsOnGrid.length > 0 ? simState.teamsOnGrid : state.teams.slice(0, 2);
-  if (teams.length < 2) {
+  const runs = simState.teamRuns.length > 0
+    ? simState.teamRuns.slice(0, SIM_MAX_TEAMS_ON_TRACK)
+    : buildSimTeamRuns(state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK));
+
+  if (runs.length < 2) {
     dotsLayer.innerHTML = '';
     return;
   }
 
   const lapLength = cachedLapLength || path.getTotalLength();
+  const laneCenter = (SIM_LANE_COUNT - 1) / 2;
 
-  dotsLayer.innerHTML = teams.map((team, idx) => {
-    const rawDistance = distance - idx * SIM_DOT_GAP;
+  dotsLayer.innerHTML = runs.map(run => {
+    const laneOffset = (run.laneIndex - laneCenter) * SIM_LANE_SPACING + run.uniqueLaneNudge;
+    const rawDistance = elapsedSec * run.pathSpeed - run.gridOffset;
     const wrappedDistance = ((rawDistance % lapLength) + lapLength) % lapLength;
-    const point = path.getPointAtLength(wrappedDistance);
+    const point = getPointWithLaneOffset(path, wrappedDistance, laneOffset, lapLength);
+    const teamTag = getTeamTag(run.team?.name, run.team?.shortTag);
+    const labelX = point.x + SIM_DOT_RADIUS + 3;
+    const labelY = point.y - (SIM_DOT_RADIUS + 2);
 
-    return `<circle class="sim-race-dot" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="7" fill="${team.color}"></circle>`;
+    return `
+      <g class="sim-race-marker">
+        <title>${escHtml(run.team.name)} · ${Math.round(run.speedKmh)} km/h</title>
+        <circle class="sim-race-dot" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${SIM_DOT_RADIUS}" fill="${run.team.color}"></circle>
+        <text class="sim-race-tag" x="${labelX.toFixed(2)}" y="${labelY.toFixed(2)}">${escHtml(teamTag)}</text>
+      </g>
+    `;
   }).join('');
+}
+
+function buildSimTeamRuns(teamsOnGrid) {
+  const list = Array.isArray(teamsOnGrid) ? teamsOnGrid.slice(0, SIM_MAX_TEAMS_ON_TRACK) : [];
+  const center = (list.length - 1) / 2;
+
+  return list.map((team, idx) => {
+    const setup = normalizeCarSetup(team.carSetup);
+    const pu = Math.min(SIM_POWER_UNIT_MAX, Math.max(1, Number(setup.powerUnit) || CAR_STAT_DEFAULTS.powerUnit));
+    const speedKmh = SIM_MAX_SPEED_KMH - (SIM_POWER_UNIT_MAX - pu) * SIM_KMH_DROP_PER_PU;
+
+    return {
+      team,
+      powerUnit: pu,
+      speedKmh,
+      pathSpeed: (speedKmh / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed,
+      laneIndex: idx % SIM_LANE_COUNT,
+      gridOffset: Math.floor(idx / SIM_LANE_COUNT) * SIM_ROW_GAP,
+      uniqueLaneNudge: (idx - center) * 0.18
+    };
+  });
+}
+
+function getPointWithLaneOffset(path, distanceOnPath, laneOffset, lapLength) {
+  const d1 = ((distanceOnPath % lapLength) + lapLength) % lapLength;
+  const d2 = (d1 + 1) % lapLength;
+  const p1 = path.getPointAtLength(d1);
+  const p2 = path.getPointAtLength(d2);
+
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const len = Math.hypot(dx, dy) || 1;
+
+  const nx = -dy / len;
+  const ny = dx / len;
+
+  return {
+    x: p1.x + nx * laneOffset,
+    y: p1.y + ny * laneOffset
+  };
+}
+
+function normalizeTeamTag(tag) {
+  return String(tag || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 5);
+}
+
+function getTeamTag(teamName, customTag) {
+  const normalizedCustomTag = normalizeTeamTag(customTag);
+  if (normalizedCustomTag.length >= 2) return normalizedCustomTag;
+  const words = String(teamName || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w => w.replace(/[^a-z0-9]/gi, ''))
+    .filter(Boolean);
+
+  const stopWords = new Set(['team', 'f1', 'formula', 'racing', 'motorsport', 'motorsports', 'scuderia']);
+  const strongWords = words.filter(w => !stopWords.has(w.toLowerCase()));
+
+  if (strongWords.length >= 2) {
+    return strongWords.slice(0, 3).map(w => w[0]).join('').toUpperCase();
+  }
+  if (strongWords.length === 1) {
+    return strongWords[0].slice(0, 3).toUpperCase();
+  }
+  if (words.length > 0) {
+    return words.slice(0, 3).map(w => w[0]).join('').toUpperCase();
+  }
+  return 'CAR';
 }
 
 function setSimStatus(message) {
@@ -775,6 +1156,7 @@ function renderTeams(list = state.teams) {
   tbody.innerHTML = list.map((t, i) => {
     const driverCount = state.drivers.filter(d => String(d.teamId) === String(t.id)).length;
     const budgetText = t.budget != null ? `$${t.budget}M` : '—';
+    const shortTag = getTeamTag(t.name, t.shortTag);
 
     return `
       <tr data-id="${t.id}">
@@ -786,6 +1168,7 @@ function renderTeams(list = state.teams) {
               : `<span class="team-dot" style="background:${t.color}; box-shadow: 0 0 6px ${t.color}"></span>`
             }
             <strong>${escHtml(t.name)}</strong>
+            <span class="team-short-tag">${escHtml(shortTag)}</span>
           </div>
         </td>
         <td>${escHtml(t.country)}</td>
@@ -931,6 +1314,7 @@ function editTeam(id) {
 
   navigate('teams');
   setValue('teamName',    team.name);
+  setValue('teamTag',     team.shortTag || '');
   setValue('teamCountry', team.country);
   setValue('teamCar',     team.car);
   setValue('teamCategory', team.category);
@@ -966,6 +1350,7 @@ function editTeam(id) {
   }
 
   editingTeamCarSetup = normalizeCarSetup(team.carSetup);
+  editingTeamSeedKey = team.seedKey || null;
 
   // Remove old entry and change button
   state.teams = state.teams.filter(t => t.id !== id);
@@ -1012,6 +1397,8 @@ function editDriver(id) {
     driverPhotoPreview.src = '';
     driverPhotoWrap.classList.remove('visible');
   }
+
+  editingDriverSeedKey = driver.seedKey || null;
 
   state.drivers = state.drivers.filter(d => d.id !== id);
 
@@ -1077,7 +1464,8 @@ function initSearch() {
     renderTeams(state.teams.filter(t =>
       t.name.toLowerCase().includes(q) ||
       t.country.toLowerCase().includes(q) ||
-      t.car.toLowerCase().includes(q)
+      t.car.toLowerCase().includes(q) ||
+      getTeamTag(t.name, t.shortTag).toLowerCase().includes(q)
     ));
   });
 
@@ -1260,6 +1648,7 @@ function resetForm(formId) {
     document.getElementById('teamCarPhoto').value = '';
     document.getElementById('teamCarPhotoUrl').value = '';
     editingTeamCarSetup = null;
+    editingTeamSeedKey = null;
   }
 
   // Reset skill display
@@ -1270,6 +1659,7 @@ function resetForm(formId) {
     recomputeSkillGroups();
     // Reset driver photo
     driverPhotoData = null;
+    editingDriverSeedKey = null;
     document.getElementById('driverPhotoPreview').src = '';
     document.getElementById('driverPhotoPreviewWrap').classList.remove('visible');
     document.getElementById('driverPhoto').value = '';
