@@ -119,13 +119,22 @@ const SIM_ROW_GAP = 34;
 const SIM_DOT_RADIUS = 2.4;
 const SIM_TURN1_ENTRY_KMH = 90;
 const SIM_TURN2_ENTRY_KMH = 85;
+const SIM_TURN4_ENTRY_KMH = 130;
+const SIM_TURN6_ENTRY_KMH = 208;
 const SIM_BRAKE_ZONE_WINDOW = 12;
 const SIM_BRAKE_PREP_DISTANCE = 64;
 const SIM_APEX_HOLD_WINDOW = 8;
 const SIM_BRAKE_DECEL_KMH_PER_SEC = 110;
-const SIM_ACCEL_KMH_PER_SEC = 58;
+const SIM_ACCEL_REFERENCE_START_KMH = 80;
+const SIM_ACCEL_REFERENCE_END_KMH = 330;
+const SIM_ACCEL_REFERENCE_TIME_SEC = 10;
+const SIM_ACCEL_KMH_PER_SEC =
+  (SIM_ACCEL_REFERENCE_END_KMH - SIM_ACCEL_REFERENCE_START_KMH) / SIM_ACCEL_REFERENCE_TIME_SEC;
+const SIM_LAUNCH_SPEED_KMH = 0;
 const SIM_TURN1_MARKER = { x: 403, y: 405 };
 const SIM_TURN2_MARKER = { x: 403, y: 355 };
+const SIM_TURN4_MARKER = { x: 205, y: 240 };
+const SIM_TURN6_MARKER = { x: 125, y: 105 };
 const SIM_ERS_DEPLOY_GAP_SEC = 3;
 const SIM_ERS_BATTERY_START = 100;
 const SIM_ERS_MIN_BATTERY_TO_DEPLOY = 15;
@@ -147,6 +156,8 @@ const simState = {
   lapLength: 0,
   turn1Distance: null,
   turn2Distance: null,
+  turn4Distance: null,
+  turn6Distance: null,
   teamsOnGrid: [],
   teamRuns: []
 };
@@ -889,16 +900,19 @@ function startSimRacingAnimation() {
   simState.lastTickTs = simState.startTs;
   simState.running = true;
   simState.teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
-  simState.teamRuns = buildSimTeamRuns(simState.teamsOnGrid).map(run => ({
-    ...run,
-    currentDistance: -run.gridOffset,
-    currentPathSpeed: run.pathSpeed,
-    currentSpeedKmh: run.speedKmh,
-    ersBattery: SIM_ERS_BATTERY_START,
-    ersActive: false,
-    ersBoostKmh: 0,
-    gapAheadSec: null
-  }));
+  simState.teamRuns = buildSimTeamRuns(simState.teamsOnGrid).map(run => {
+    const launchSpeedKmh = Math.min(run.speedKmh, SIM_LAUNCH_SPEED_KMH);
+    return {
+      ...run,
+      currentDistance: -run.gridOffset,
+      currentPathSpeed: (launchSpeedKmh / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed,
+      currentSpeedKmh: launchSpeedKmh,
+      ersBattery: SIM_ERS_BATTERY_START,
+      ersActive: false,
+      ersBoostKmh: 0,
+      gapAheadSec: null
+    };
+  });
   simState.lapLength = path.getTotalLength();
   updateSimBrakeDistances(path, simState.lapLength);
 
@@ -996,13 +1010,15 @@ function renderSimDriverTiming(runs, elapsedSec, lapLength) {
     };
   }).sort((a, b) => b.rawDistance - a.rawDistance);
 
-  const leader = ordered[0];
-  const leaderSpeed = Math.max(leader.run.currentPathSpeed || leader.run.pathSpeed, 0.0001);
-
   legend.innerHTML = ordered.map((entry, idx) => {
-    const gapDistance = leader.rawDistance - entry.rawDistance;
-    const gapSec = gapDistance / leaderSpeed;
-    const timing = idx === 0 ? 'Leader' : `+${gapSec.toFixed(3)}s`;
+    let timing = 'Leader';
+    if (idx > 0) {
+      const ahead = ordered[idx - 1];
+      const intervalDistance = Math.max(0, ahead.rawDistance - entry.rawDistance);
+      const intervalSpeed = Math.max(entry.run.currentPathSpeed || entry.run.pathSpeed, 0.0001);
+      const intervalSec = intervalDistance / intervalSpeed;
+      timing = `INT +${intervalSec.toFixed(3)}s`;
+    }
     const lap = Math.max(1, Math.floor(entry.rawDistance / lapLength) + 1);
     const runPathSpeed = Math.max(entry.run.currentPathSpeed || entry.run.pathSpeed, 0.0001);
     const lapTime = lapLength / runPathSpeed;
@@ -1025,6 +1041,8 @@ function updateSimBrakeDistances(path, lapLength) {
   if (!path || !lapLength) return;
   simState.turn1Distance = findClosestDistanceOnPath(path, SIM_TURN1_MARKER.x, SIM_TURN1_MARKER.y, lapLength);
   simState.turn2Distance = findClosestDistanceOnPath(path, SIM_TURN2_MARKER.x, SIM_TURN2_MARKER.y, lapLength);
+  simState.turn4Distance = findClosestDistanceOnPath(path, SIM_TURN4_MARKER.x, SIM_TURN4_MARKER.y, lapLength);
+  simState.turn6Distance = findClosestDistanceOnPath(path, SIM_TURN6_MARKER.x, SIM_TURN6_MARKER.y, lapLength);
 }
 
 function findClosestDistanceOnPath(path, targetX, targetY, lapLength) {
@@ -1083,6 +1101,8 @@ function getBrakeTargetSpeedKmh(baseSpeedKmh, distanceOnLap, lapLength) {
   let target = baseSpeedKmh;
   target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn1Distance, SIM_TURN1_ENTRY_KMH, lapLength);
   target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn2Distance, SIM_TURN2_ENTRY_KMH, lapLength);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn4Distance, SIM_TURN4_ENTRY_KMH, lapLength);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn6Distance, SIM_TURN6_ENTRY_KMH, lapLength);
   return target;
 }
 
@@ -1119,7 +1139,9 @@ function getErsChargeRatePercentPerSec(ersDeployRating) {
 function getRequiredBrakeDecelKmhPerSec(currentSpeedKmh, distanceOnLap, currentPathSpeed, lapLength) {
   const constraints = [
     { turnDistance: simState.turn1Distance, targetSpeed: SIM_TURN1_ENTRY_KMH },
-    { turnDistance: simState.turn2Distance, targetSpeed: SIM_TURN2_ENTRY_KMH }
+    { turnDistance: simState.turn2Distance, targetSpeed: SIM_TURN2_ENTRY_KMH },
+    { turnDistance: simState.turn4Distance, targetSpeed: SIM_TURN4_ENTRY_KMH },
+    { turnDistance: simState.turn6Distance, targetSpeed: SIM_TURN6_ENTRY_KMH }
   ];
 
   let requiredDecel = 0;
