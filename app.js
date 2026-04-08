@@ -135,6 +135,24 @@ const SIM_TURN1_MARKER = { x: 403, y: 405 };
 const SIM_TURN2_MARKER = { x: 403, y: 355 };
 const SIM_TURN4_MARKER = { x: 205, y: 240 };
 const SIM_TURN6_MARKER = { x: 125, y: 105 };
+const SIM_DRS_OVERLAY_SAMPLE_SPACING = 8;
+const SIM_DRS_ZONE_CONFIGS = [
+  {
+    id: 'DRS 1',
+    startMarker: { x: 742.6, y: 380.9 },
+    endMarker: { x: 440.6, y: 380 }
+  },
+  {
+    id: 'DRS 2',
+    startMarker: { x: 265.8, y: 80.8 },
+    endMarker: { x: 438.9, y: 248.7 }
+  }
+];
+const SIM_DRS_ACTIVATION_GAP_SEC = 1;
+const SIM_DRS_ACCEL_MULTIPLIER = 1.02;
+const SIM_DRS_TOP_SPEED_BOOST_PU_GT_90 = 0.04;
+const SIM_DRS_TOP_SPEED_BOOST_PU_85_TO_90 = 0.07;
+const SIM_DRS_TOP_SPEED_BOOST_PU_LT_85 = 0.12;
 const SIM_ERS_DEPLOY_GAP_SEC = 3;
 const SIM_ERS_BATTERY_START = 100;
 const SIM_ERS_MIN_BATTERY_TO_DEPLOY = 15;
@@ -158,6 +176,12 @@ const simState = {
   turn2Distance: null,
   turn4Distance: null,
   turn6Distance: null,
+  drsZones: [],
+  drsPickMode: null,
+  drsDraftZone: {
+    startMarker: null,
+    endMarker: null
+  },
   teamsOnGrid: [],
   teamRuns: []
 };
@@ -844,7 +868,99 @@ function initSimRacingSection() {
     showToast('Simulation preview started at 1x speed.', 'success');
   });
 
+  initSimDrsCoordinatePicker();
   renderSimRacingPreview();
+}
+
+function initSimDrsCoordinatePicker() {
+  const btnStart = document.getElementById('btnPickDrsStart');
+  const btnEnd = document.getElementById('btnPickDrsEnd');
+  const btnCopy = document.getElementById('btnCopyDrsCoords');
+  const trackSvg = document.querySelector('#section-sim-racing .monza-track');
+  if (!btnStart || !btnEnd || !btnCopy || !trackSvg) return;
+
+  btnStart.addEventListener('click', () => {
+    simState.drsPickMode = 'start';
+    updateSimDrsPickerUI();
+    setSimStatus('DRS picker: click on track to set START coordinate.');
+  });
+
+  btnEnd.addEventListener('click', () => {
+    simState.drsPickMode = 'end';
+    updateSimDrsPickerUI();
+    setSimStatus('DRS picker: click on track to set END coordinate.');
+  });
+
+  btnCopy.addEventListener('click', async () => {
+    const start = simState.drsDraftZone.startMarker;
+    const end = simState.drsDraftZone.endMarker;
+    if (!start || !end) {
+      showToast('Pick both START and END coordinates first.', 'info');
+      return;
+    }
+
+    const configText = `{ id: 'DRS X', startMarker: { x: ${start.x}, y: ${start.y} }, endMarker: { x: ${end.x}, y: ${end.y} } }`;
+    try {
+      await navigator.clipboard.writeText(configText);
+      showToast('DRS coordinates copied to clipboard.', 'success');
+    } catch (_error) {
+      showToast('Could not copy automatically. Coordinate text is shown below.', 'warning');
+    }
+    setSimStatus(`DRS config: ${configText}`);
+  });
+
+  trackSvg.addEventListener('click', event => {
+    if (!simState.drsPickMode) return;
+    const picked = getSvgCoordinateFromEvent(trackSvg, event);
+    if (!picked) return;
+
+    if (simState.drsPickMode === 'start') {
+      simState.drsDraftZone.startMarker = picked;
+      showToast(`DRS START set at (${picked.x}, ${picked.y})`, 'success');
+    } else {
+      simState.drsDraftZone.endMarker = picked;
+      showToast(`DRS END set at (${picked.x}, ${picked.y})`, 'success');
+    }
+
+    simState.drsPickMode = null;
+    updateSimDrsPickerUI();
+    renderSimRacingPreview();
+  });
+
+  updateSimDrsPickerUI();
+}
+
+function getSvgCoordinateFromEvent(svg, event) {
+  if (!svg || !event || typeof svg.createSVGPoint !== 'function') return null;
+  const matrix = svg.getScreenCTM();
+  if (!matrix) return null;
+
+  const pt = svg.createSVGPoint();
+  pt.x = event.clientX;
+  pt.y = event.clientY;
+  const transformed = pt.matrixTransform(matrix.inverse());
+  return {
+    x: Number(transformed.x.toFixed(1)),
+    y: Number(transformed.y.toFixed(1))
+  };
+}
+
+function updateSimDrsPickerUI() {
+  const btnStart = document.getElementById('btnPickDrsStart');
+  const btnEnd = document.getElementById('btnPickDrsEnd');
+  const coords = document.getElementById('simDrsCoords');
+  const trackSvg = document.querySelector('#section-sim-racing .monza-track');
+
+  const start = simState.drsDraftZone.startMarker;
+  const end = simState.drsDraftZone.endMarker;
+  const startText = start ? `(${start.x}, ${start.y})` : '-';
+  const endText = end ? `(${end.x}, ${end.y})` : '-';
+  const pickModeText = simState.drsPickMode ? ` | Picking: ${simState.drsPickMode.toUpperCase()}` : '';
+
+  if (coords) coords.textContent = `DRS Start: ${startText} | DRS End: ${endText}${pickModeText}`;
+  if (btnStart) btnStart.classList.toggle('is-active', simState.drsPickMode === 'start');
+  if (btnEnd) btnEnd.classList.toggle('is-active', simState.drsPickMode === 'end');
+  if (trackSvg) trackSvg.classList.toggle('drs-pick-mode', Boolean(simState.drsPickMode));
 }
 
 function canStartSimPreview() {
@@ -884,10 +1000,11 @@ function renderSimRacingPreview() {
   if (path) {
     simState.lapLength = path.getTotalLength();
     updateSimBrakeDistances(path, simState.lapLength);
+    updateSimDrsZones(path, simState.lapLength);
   }
 
   btn.textContent = simState.running ? 'Stop Sim' : 'Sim Racing';
-  markerWrap.innerHTML = '';
+  markerWrap.innerHTML = renderSimDrsZoneBadges(simState.drsZones);
   renderRaceDotsAtTime(0);
 }
 
@@ -908,6 +1025,10 @@ function startSimRacingAnimation() {
       currentPathSpeed: (launchSpeedKmh / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed,
       currentSpeedKmh: launchSpeedKmh,
       ersBattery: SIM_ERS_BATTERY_START,
+      drsActive: false,
+      drsZoneId: null,
+      drsEndDistance: null,
+      drsTopSpeedKmh: run.speedKmh,
       ersActive: false,
       ersBoostKmh: 0,
       gapAheadSec: null
@@ -915,6 +1036,7 @@ function startSimRacingAnimation() {
   });
   simState.lapLength = path.getTotalLength();
   updateSimBrakeDistances(path, simState.lapLength);
+  updateSimDrsZones(path, simState.lapLength);
 
   const btn = document.getElementById('btnSimRacing');
   if (btn) btn.textContent = 'Stop Sim';
@@ -953,19 +1075,22 @@ function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
   const dotsLayer = document.getElementById('monzaRaceDots');
   if (!path || !dotsLayer) return;
 
+  const lapLength = cachedLapLength || path.getTotalLength();
+  if (!simState.drsZones.length) {
+    updateSimDrsZones(path, lapLength);
+  }
+  const drsZoneMarkup = renderSimDrsZonesMarkup(path, lapLength, simState.drsZones);
+
   const runs = simState.teamRuns.length > 0
     ? simState.teamRuns
     : buildSimTeamRuns(state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK));
 
   if (runs.length < 2) {
-    dotsLayer.innerHTML = '';
+    dotsLayer.innerHTML = drsZoneMarkup;
     return;
   }
-
-  const lapLength = cachedLapLength || path.getTotalLength();
   const laneCenter = (SIM_LANE_COUNT - 1) / 2;
-
-  dotsLayer.innerHTML = runs.map(run => {
+  const raceDotMarkup = runs.map(run => {
     const laneOffset = (run.laneIndex - laneCenter) * SIM_LANE_SPACING + run.uniqueLaneNudge;
     const rawDistance = typeof run.currentDistance === 'number'
       ? run.currentDistance
@@ -977,16 +1102,19 @@ function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
     const labelY = point.y - (SIM_DOT_RADIUS + 2);
     const currentSpeed = run.currentSpeedKmh ?? run.speedKmh;
     const battery = Math.max(0, Math.min(100, Number(run.ersBattery ?? SIM_ERS_BATTERY_START)));
+    const drsState = run.drsActive ? `DRS ON ${run.drsZoneId || ''}`.trim() : 'DRS OFF';
     const ersState = run.ersActive ? `ERS ON +${Math.round(run.ersBoostKmh || 0)} km/h` : 'ERS OFF';
 
     return `
       <g class="sim-race-marker">
-        <title>${escHtml(run.tag)} (${escHtml(run.team.name)}) · ${Math.round(currentSpeed)} km/h · ${ersState} · BAT ${battery.toFixed(1)}%</title>
+        <title>${escHtml(run.tag)} (${escHtml(run.team.name)}) · ${Math.round(currentSpeed)} km/h · ${drsState} · ${ersState} · BAT ${battery.toFixed(1)}%</title>
         <circle class="sim-race-dot" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${SIM_DOT_RADIUS}" fill="${run.team.color}"></circle>
         <text class="sim-race-tag" x="${labelX.toFixed(2)}" y="${labelY.toFixed(2)}">${escHtml(teamTag)}</text>
       </g>
     `;
   }).join('');
+
+  dotsLayer.innerHTML = `${drsZoneMarkup}${raceDotMarkup}`;
 
   renderSimDriverTiming(runs, elapsedSec, lapLength);
 }
@@ -1024,6 +1152,9 @@ function renderSimDriverTiming(runs, elapsedSec, lapLength) {
     const lapTime = lapLength / runPathSpeed;
     const shownSpeed = Math.round(entry.run.currentSpeedKmh || entry.run.speedKmh);
     const ersBattery = Math.max(0, Math.min(100, Number(entry.run.ersBattery ?? SIM_ERS_BATTERY_START)));
+    const drsLabel = entry.run.drsActive
+      ? `DRS ON (${entry.run.drsZoneId || 'ZONE'})`
+      : 'DRS OFF';
     const ersLabel = entry.run.ersActive
       ? `ERS ON (+${Math.round(entry.run.ersBoostKmh || 0)})`
       : 'ERS OFF';
@@ -1031,7 +1162,7 @@ function renderSimDriverTiming(runs, elapsedSec, lapLength) {
     return `
       <span class="sim-legend-item">
         <span class="sim-legend-dot" style="background:${entry.run.team.color}"></span>
-        <span>P${idx + 1} · ${escHtml(entry.run.tag)} · ${escHtml(getSimRunDisplayName(entry.run))} · ${timing} · ${shownSpeed} km/h · BAT ${ersBattery.toFixed(1)}% · ${ersLabel} · L${lap} · ${lapTime.toFixed(2)}s/lap</span>
+        <span>P${idx + 1} · ${escHtml(entry.run.tag)} · ${escHtml(getSimRunDisplayName(entry.run))} · ${timing} · ${shownSpeed} km/h · BAT ${ersBattery.toFixed(1)}% · ${drsLabel} · ${ersLabel} · L${lap} · ${lapTime.toFixed(2)}s/lap</span>
       </span>
     `;
   }).join('');
@@ -1043,6 +1174,92 @@ function updateSimBrakeDistances(path, lapLength) {
   simState.turn2Distance = findClosestDistanceOnPath(path, SIM_TURN2_MARKER.x, SIM_TURN2_MARKER.y, lapLength);
   simState.turn4Distance = findClosestDistanceOnPath(path, SIM_TURN4_MARKER.x, SIM_TURN4_MARKER.y, lapLength);
   simState.turn6Distance = findClosestDistanceOnPath(path, SIM_TURN6_MARKER.x, SIM_TURN6_MARKER.y, lapLength);
+}
+
+function updateSimDrsZones(path, lapLength) {
+  if (!path || !lapLength) {
+    simState.drsZones = [];
+    return;
+  }
+
+  const zoneDefs = SIM_DRS_ZONE_CONFIGS.slice();
+  if (simState.drsDraftZone.startMarker && simState.drsDraftZone.endMarker) {
+    zoneDefs.unshift({
+      id: 'DRS DRAFT',
+      startMarker: simState.drsDraftZone.startMarker,
+      endMarker: simState.drsDraftZone.endMarker
+    });
+  }
+
+  simState.drsZones = zoneDefs.map(zone => {
+    const startDistance = findClosestDistanceOnPath(path, zone.startMarker.x, zone.startMarker.y, lapLength);
+    const endDistance = findClosestDistanceOnPath(path, zone.endMarker.x, zone.endMarker.y, lapLength);
+    const zoneLength = getForwardDistanceOnLap(startDistance, endDistance, lapLength);
+    return {
+      ...zone,
+      startDistance,
+      endDistance,
+      zoneLength
+    };
+  }).filter(zone => zone.zoneLength > 1);
+}
+
+function renderSimDrsZoneBadges(zones) {
+  if (!Array.isArray(zones) || zones.length === 0) {
+    return '<span class="sim-drs-chip">No DRS zone configured</span>';
+  }
+
+  return zones.map(zone => {
+    const zoneLength = Math.round(Number(zone.zoneLength) || 0);
+    return `<span class="sim-drs-chip">${escHtml(zone.id)} ACTIVE · LEN ${zoneLength}</span>`;
+  }).join('');
+}
+
+function renderSimDrsZonesMarkup(path, lapLength, zones) {
+  if (!path || !lapLength || !Array.isArray(zones) || zones.length === 0) return '';
+
+  return zones.map(zone => {
+    const startDistance = ((zone.startDistance % lapLength) + lapLength) % lapLength;
+    const zoneLength = Math.max(0.1, Number(zone.zoneLength) || 0.1);
+    const endDistance = (startDistance + zoneLength) % lapLength;
+    const midDistance = (startDistance + zoneLength * 0.5) % lapLength;
+
+    const startPoint = path.getPointAtLength(startDistance);
+    const endPoint = path.getPointAtLength(endDistance);
+    const labelPoint = path.getPointAtLength(midDistance);
+    const polylinePoints = buildPathSegmentPolyline(
+      path,
+      startDistance,
+      zoneLength,
+      lapLength,
+      SIM_DRS_OVERLAY_SAMPLE_SPACING
+    );
+
+    return `
+      <g class="sim-drs-zone" aria-label="${escHtml(zone.id)} activation zone">
+        <polyline class="sim-drs-zone-line" points="${polylinePoints}"></polyline>
+        <circle class="sim-drs-zone-node sim-drs-zone-start" cx="${startPoint.x.toFixed(2)}" cy="${startPoint.y.toFixed(2)}" r="3"></circle>
+        <circle class="sim-drs-zone-node sim-drs-zone-end" cx="${endPoint.x.toFixed(2)}" cy="${endPoint.y.toFixed(2)}" r="3"></circle>
+        <text class="sim-drs-zone-label" x="${labelPoint.x.toFixed(2)}" y="${(labelPoint.y - 8).toFixed(2)}">${escHtml(zone.id)}</text>
+      </g>
+    `;
+  }).join('');
+}
+
+function buildPathSegmentPolyline(path, startDistance, segmentLength, lapLength, stepDistance) {
+  const distance = Math.max(0.1, Number(segmentLength) || 0.1);
+  const step = Math.max(2, Number(stepDistance) || 8);
+  const sampleCount = Math.max(6, Math.ceil(distance / step));
+  const points = [];
+
+  for (let i = 0; i <= sampleCount; i++) {
+    const traveled = (distance * i) / sampleCount;
+    const sampleDistance = (startDistance + traveled) % lapLength;
+    const point = path.getPointAtLength(sampleDistance);
+    points.push(`${point.x.toFixed(2)},${point.y.toFixed(2)}`);
+  }
+
+  return points.join(' ');
 }
 
 function findClosestDistanceOnPath(path, targetX, targetY, lapLength) {
@@ -1074,6 +1291,25 @@ function isDistanceInsideWindow(distanceOnLap, centerDistance, halfWindow, lapLe
 
 function getForwardDistanceOnLap(fromDistance, toDistance, lapLength) {
   return ((toDistance - fromDistance) % lapLength + lapLength) % lapLength;
+}
+
+function hasCrossedDistanceOnLap(fromDistance, toDistance, targetDistance, lapLength) {
+  if (!lapLength) return false;
+  const traveled = getForwardDistanceOnLap(fromDistance, toDistance, lapLength);
+  const targetAhead = getForwardDistanceOnLap(fromDistance, targetDistance, lapLength);
+  const epsilon = 1e-4;
+  return targetAhead > epsilon && targetAhead <= traveled + epsilon;
+}
+
+function isDrsGapEligible(gapAheadSec) {
+  return Number.isFinite(gapAheadSec) && gapAheadSec < SIM_DRS_ACTIVATION_GAP_SEC;
+}
+
+function getDrsTopSpeedMultiplier(powerUnit) {
+  const pu = Math.max(1, Number(powerUnit) || 1);
+  if (pu > 90) return 1 + SIM_DRS_TOP_SPEED_BOOST_PU_GT_90;
+  if (pu >= 85) return 1 + SIM_DRS_TOP_SPEED_BOOST_PU_85_TO_90;
+  return 1 + SIM_DRS_TOP_SPEED_BOOST_PU_LT_85;
 }
 
 function applyTurnSpeedTarget(baseSpeedKmh, distanceOnLap, turnDistance, turnTargetSpeed, lapLength) {
@@ -1192,6 +1428,11 @@ function advanceSimRuns(dtSec, lapLength) {
       run.currentDistance = -run.gridOffset;
     }
 
+    const wrappedDistance = ((run.currentDistance % lapLength) + lapLength) % lapLength;
+    const previousDistanceOnLap = wrappedDistance;
+    const referencePathSpeed = Math.max(run.currentPathSpeed || run.pathSpeed, 0.05);
+    const projectedDistanceOnLap = ((run.currentDistance + referencePathSpeed * dtSec) % lapLength + lapLength) % lapLength;
+
     const ersDeployRating = normalizeErsDeployRating(run.ersDeployRating);
     const currentBattery = clampSimBattery(run.ersBattery ?? SIM_ERS_BATTERY_START);
     const gapAheadSec = gapAheadSecByRun.get(run);
@@ -1200,17 +1441,26 @@ function advanceSimRuns(dtSec, lapLength) {
       gapAheadSec <= SIM_ERS_DEPLOY_GAP_SEC &&
       currentBattery > SIM_ERS_MIN_BATTERY_TO_DEPLOY;
 
+    const drsGapEligible = isDrsGapEligible(gapAheadSec);
+    let crossedDrsStartZone = null;
+    if (!run.drsActive && drsGapEligible && Array.isArray(simState.drsZones) && simState.drsZones.length > 0) {
+      crossedDrsStartZone = simState.drsZones.find(zone =>
+        hasCrossedDistanceOnLap(previousDistanceOnLap, projectedDistanceOnLap, zone.startDistance, lapLength)
+      ) || null;
+    }
+    const drsActiveForStep = Boolean(run.drsActive) || Boolean(crossedDrsStartZone);
+    const drsTopSpeedMultiplier = drsActiveForStep ? getDrsTopSpeedMultiplier(run.powerUnit) : 1;
+    const drsTopSpeedKmh = run.speedKmh * drsTopSpeedMultiplier;
+
     const ersBoostKmh = shouldDeployErs ? getErsBoostKmh(ersDeployRating) : 0;
-    const baseSpeedWithErs = run.speedKmh + ersBoostKmh;
-    const wrappedDistance = ((run.currentDistance % lapLength) + lapLength) % lapLength;
+    const baseSpeedWithErs = drsTopSpeedKmh + ersBoostKmh;
     const targetSpeedKmh = getBrakeTargetSpeedKmh(baseSpeedWithErs, wrappedDistance, lapLength);
 
     const currentSpeed = typeof run.currentSpeedKmh === 'number' ? run.currentSpeedKmh : run.speedKmh;
-    const referencePathSpeed = Math.max(run.currentPathSpeed || run.pathSpeed, 0.05);
     const adaptiveDecel = getRequiredBrakeDecelKmhPerSec(currentSpeed, wrappedDistance, referencePathSpeed, lapLength);
     const decelRate = Math.max(SIM_BRAKE_DECEL_KMH_PER_SEC, adaptiveDecel);
     const decelStep = decelRate * dtSec;
-    const accelStep = SIM_ACCEL_KMH_PER_SEC * dtSec;
+    const accelStep = SIM_ACCEL_KMH_PER_SEC * (drsActiveForStep ? SIM_DRS_ACCEL_MULTIPLIER : 1) * dtSec;
 
     let nextSpeed = currentSpeed;
     if (targetSpeedKmh < currentSpeed) {
@@ -1230,9 +1480,32 @@ function advanceSimRuns(dtSec, lapLength) {
     run.currentSpeedKmh = nextSpeed;
     run.currentPathSpeed = (nextSpeed / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed;
     run.currentDistance += run.currentPathSpeed * dtSec;
+    const nextDistanceOnLap = ((run.currentDistance % lapLength) + lapLength) % lapLength;
+
+    if (!run.drsActive && drsGapEligible && Array.isArray(simState.drsZones) && simState.drsZones.length > 0) {
+      const activationZone = simState.drsZones.find(zone =>
+        hasCrossedDistanceOnLap(previousDistanceOnLap, nextDistanceOnLap, zone.startDistance, lapLength)
+      ) || null;
+      if (activationZone) {
+        run.drsActive = true;
+        run.drsZoneId = activationZone.id || 'DRS';
+        run.drsEndDistance = activationZone.endDistance;
+      }
+    }
+
+    if (run.drsActive && typeof run.drsEndDistance === 'number') {
+      const crossedDrsEnd = hasCrossedDistanceOnLap(previousDistanceOnLap, nextDistanceOnLap, run.drsEndDistance, lapLength);
+      if (crossedDrsEnd) {
+        run.drsActive = false;
+        run.drsZoneId = null;
+        run.drsEndDistance = null;
+      }
+    }
+
     run.ersBattery = nextBattery;
     run.ersActive = shouldDeployErs && nextBattery > SIM_ERS_MIN_BATTERY_TO_DEPLOY;
     run.ersBoostKmh = run.ersActive ? ersBoostKmh : 0;
+    run.drsTopSpeedKmh = drsTopSpeedKmh;
     run.gapAheadSec = Number.isFinite(gapAheadSec) ? gapAheadSec : null;
   });
 }
@@ -1295,7 +1568,11 @@ function buildSimTeamRuns(teamsOnGrid) {
       pathSpeed: (speedKmh / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed,
       laneIndex: idx % SIM_LANE_COUNT,
       gridOffset: Math.floor(idx / SIM_LANE_COUNT) * SIM_ROW_GAP,
-      uniqueLaneNudge: (idx - center) * 0.18
+      uniqueLaneNudge: (idx - center) * 0.18,
+      drsActive: false,
+      drsZoneId: null,
+      drsEndDistance: null,
+      drsTopSpeedKmh: speedKmh
     };
   });
 }
