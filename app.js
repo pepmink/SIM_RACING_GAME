@@ -117,6 +117,7 @@ const SIM_LANE_COUNT = 3;
 const SIM_LANE_SPACING = 2.4;
 const SIM_ROW_GAP = 34;
 const SIM_DOT_RADIUS = 2.4;
+<<<<<<< HEAD
 const SIM_TURN1_ENTRY_KMH = 90;
 const SIM_TURN2_ENTRY_KMH = 85;
 const SIM_TURN4_ENTRY_KMH = 130;
@@ -164,6 +165,8 @@ const SIM_ERS_CHARGE_REFERENCE = 90;
 const SIM_ERS_CHARGE_AT_90_PER_SEC = 4;
 const SIM_ERS_CHARGE_ADD_PER_POINT_ABOVE_90 = 2;
 const SIM_ERS_CHARGE_DROP_PER_POINT_BELOW_90 = 1.5;
+=======
+>>>>>>> 425121769ccde1f80501c0a88111ad11f95776db
 
 const simState = {
   running: false,
@@ -171,6 +174,7 @@ const simState = {
   startTs: 0,
   lastTickTs: 0,
   speed: SIM_DEFAULT_SPEED,
+<<<<<<< HEAD
   lapLength: 0,
   turn1Distance: null,
   turn2Distance: null,
@@ -182,6 +186,8 @@ const simState = {
     startMarker: null,
     endMarker: null
   },
+=======
+>>>>>>> 425121769ccde1f80501c0a88111ad11f95776db
   teamsOnGrid: [],
   teamRuns: []
 };
@@ -989,12 +995,13 @@ function renderSimRacingPreview() {
   }
 
   if (!simState.running) {
-    status.textContent = `Monza preview is ready. ERS auto deploy triggers under 3.000s gap when battery is above 15%.`;
+    status.textContent = `Monza preview is ready. Speed is based on Power Unit (${SIM_POWER_UNIT_MAX} => ${SIM_MAX_SPEED_KMH} km/h).`;
   }
 
   const teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
   simState.teamsOnGrid = teamsOnGrid;
   simState.teamRuns = buildSimTeamRuns(teamsOnGrid);
+<<<<<<< HEAD
 
   const path = document.getElementById('monzaRaceLine');
   if (path) {
@@ -1003,6 +1010,8 @@ function renderSimRacingPreview() {
     updateSimDrsZones(path, simState.lapLength);
   }
 
+=======
+>>>>>>> 425121769ccde1f80501c0a88111ad11f95776db
   btn.textContent = simState.running ? 'Stop Sim' : 'Sim Racing';
   markerWrap.innerHTML = renderSimDrsZoneBadges(simState.drsZones);
   renderRaceDotsAtTime(0);
@@ -1017,6 +1026,7 @@ function startSimRacingAnimation() {
   simState.lastTickTs = simState.startTs;
   simState.running = true;
   simState.teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
+<<<<<<< HEAD
   simState.teamRuns = buildSimTeamRuns(simState.teamsOnGrid).map(run => {
     const launchSpeedKmh = Math.min(run.speedKmh, SIM_LAUNCH_SPEED_KMH);
     return {
@@ -1037,12 +1047,17 @@ function startSimRacingAnimation() {
   simState.lapLength = path.getTotalLength();
   updateSimBrakeDistances(path, simState.lapLength);
   updateSimDrsZones(path, simState.lapLength);
+=======
+  simState.teamRuns = buildSimTeamRuns(simState.teamsOnGrid);
+>>>>>>> 425121769ccde1f80501c0a88111ad11f95776db
 
   const btn = document.getElementById('btnSimRacing');
   if (btn) btn.textContent = 'Stop Sim';
 
-  setSimStatus('Simulation preview running. ERS deploy: gap < 3.000s, battery > 15%, with battery drain and recharge rules active.');
-  renderRaceDotsAtTime(0, simState.lapLength);
+  setSimStatus('Simulation preview running. Cars use speed from Power Unit and can overtake.');
+  renderRaceDotsAtTime(0);
+
+  const lapLength = path.getTotalLength();
 
   const tick = now => {
     if (!simState.running) return;
@@ -1100,6 +1115,7 @@ function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
     const teamTag = run.tag;
     const labelX = point.x + SIM_DOT_RADIUS + 3;
     const labelY = point.y - (SIM_DOT_RADIUS + 2);
+<<<<<<< HEAD
     const currentSpeed = run.currentSpeedKmh ?? run.speedKmh;
     const battery = Math.max(0, Math.min(100, Number(run.ersBattery ?? SIM_ERS_BATTERY_START)));
     const drsState = run.drsActive ? `DRS ON ${run.drsZoneId || ''}`.trim() : 'DRS OFF';
@@ -1108,11 +1124,18 @@ function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
     return `
       <g class="sim-race-marker">
         <title>${escHtml(run.tag)} (${escHtml(run.team.name)}) · ${Math.round(currentSpeed)} km/h · ${drsState} · ${ersState} · BAT ${battery.toFixed(1)}%</title>
+=======
+
+    return `
+      <g class="sim-race-marker">
+        <title>${escHtml(run.team.name)} · ${Math.round(run.speedKmh)} km/h</title>
+>>>>>>> 425121769ccde1f80501c0a88111ad11f95776db
         <circle class="sim-race-dot" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${SIM_DOT_RADIUS}" fill="${run.team.color}"></circle>
         <text class="sim-race-tag" x="${labelX.toFixed(2)}" y="${labelY.toFixed(2)}">${escHtml(teamTag)}</text>
       </g>
     `;
   }).join('');
+<<<<<<< HEAD
 
   dotsLayer.innerHTML = `${drsZoneMarkup}${raceDotMarkup}`;
 
@@ -1508,6 +1531,8 @@ function advanceSimRuns(dtSec, lapLength) {
     run.drsTopSpeedKmh = drsTopSpeedKmh;
     run.gapAheadSec = Number.isFinite(gapAheadSec) ? gapAheadSec : null;
   });
+=======
+>>>>>>> 425121769ccde1f80501c0a88111ad11f95776db
 }
 
 function buildSimTeamRuns(teamsOnGrid) {
@@ -1535,35 +1560,13 @@ function buildSimTeamRuns(teamsOnGrid) {
     const team = runObj.team;
     const setup = normalizeCarSetup(team.carSetup);
     const pu = Math.min(SIM_POWER_UNIT_MAX, Math.max(1, Number(setup.powerUnit) || CAR_STAT_DEFAULTS.powerUnit));
-    const ersDeployRating = normalizeErsDeployRating(setup.ersDeploy);
-
-    // Base speed from PU:
-    // PU 99 => 370 km/h, each lost PU point => -2 km/h.
-    // For PU below 90, each additional lost point (under 90) => -3 km/h.
-    let speedKmh;
-    if (pu >= 90) {
-      speedKmh = SIM_MAX_SPEED_KMH - (SIM_POWER_UNIT_MAX - pu) * 2;
-    } else {
-      const speedAtPu90 = SIM_MAX_SPEED_KMH - (SIM_POWER_UNIT_MAX - 90) * 2;
-      speedKmh = speedAtPu90 - (90 - pu) * 3;
-    }
-
-    let driverBonus = 0;
-    if (runObj.driver && runObj.driver.skills) {
-      const { overall } = getComputedSkills(runObj.driver.skills);
-      if (overall > 90) driverBonus = 5;
-      else if (overall > 85) driverBonus = 3;
-      else if (overall > 80) driverBonus = 2;
-    }
-
-    speedKmh += driverBonus;
+    const speedKmh = SIM_MAX_SPEED_KMH - (SIM_POWER_UNIT_MAX - pu) * SIM_KMH_DROP_PER_PU;
 
     return {
       team,
       driver: runObj.driver || null,
       tag: runObj.tag,
       powerUnit: pu,
-      ersDeployRating,
       speedKmh,
       pathSpeed: (speedKmh / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed,
       laneIndex: idx % SIM_LANE_COUNT,
