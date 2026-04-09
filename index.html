@@ -429,7 +429,15 @@
 
           <div class="sim-actions">
             <button type="button" class="btn btn-primary" id="btnSimRacing">Sim Racing</button>
+            <button type="button" class="btn btn-secondary" id="btnSimReset" style="display:none">Lam moi</button>
             <span class="sim-status" id="simStatus">At least 2 teams are required to build the grid.</span>
+          </div>
+
+          <div class="sim-drs-tools">
+            <button type="button" class="btn btn-ghost" id="btnPickDrsStart">Pick DRS Start</button>
+            <button type="button" class="btn btn-ghost" id="btnPickDrsEnd">Pick DRS End</button>
+            <button type="button" class="btn btn-ghost" id="btnCopyDrsCoords">Copy DRS Coords</button>
+            <span class="sim-drs-coords" id="simDrsCoords">DRS Start: - | DRS End: -</span>
           </div>
 
           <div class="monza-track-wrap" id="monzaTrackWrap">
@@ -487,6 +495,28 @@
           </div>
 
           <div class="sim-team-legend" id="simTeamLegend"></div>
+
+          <div class="sim-results-tab" id="simResultsTab" style="display:none">
+            <div class="sim-results-header">
+              <h4>Race Results</h4>
+              <span class="sim-results-meta" id="simResultsMeta"></span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table sim-results-table">
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>Tag</th>
+                    <th>Driver</th>
+                    <th>Team</th>
+                    <th>Finish Time</th>
+                    <th>Gap To Leader</th>
+                  </tr>
+                </thead>
+                <tbody id="simResultsBody"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </section>
