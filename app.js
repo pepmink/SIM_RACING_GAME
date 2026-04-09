@@ -135,6 +135,7 @@ const SIM_TURN1_MARKER = { x: 403, y: 405 };
 const SIM_TURN2_MARKER = { x: 403, y: 355 };
 const SIM_TURN4_MARKER = { x: 205, y: 240 };
 const SIM_TURN6_MARKER = { x: 125, y: 105 };
+const SIM_START_FINISH_MARKER = { x: 600, y: 380.9 };
 const SIM_DRS_OVERLAY_SAMPLE_SPACING = 8;
 const SIM_DRS_ZONE_CONFIGS = [
   {
@@ -153,6 +154,7 @@ const SIM_DRS_ACCEL_MULTIPLIER = 1.02;
 const SIM_DRS_TOP_SPEED_BOOST_PU_GT_90 = 0.04;
 const SIM_DRS_TOP_SPEED_BOOST_PU_85_TO_90 = 0.07;
 const SIM_DRS_TOP_SPEED_BOOST_PU_LT_85 = 0.12;
+const SIM_RACE_TOTAL_LAPS = 3;
 const SIM_ERS_BATTERY_START = 100;
 const SIM_ERS_MIN_BATTERY_TO_DEPLOY = 15;
 const SIM_ERS_ACCEL_MULTIPLIER = 1.03;
@@ -167,12 +169,14 @@ const simState = {
   rafId: null,
   startTs: 0,
   lastTickTs: 0,
+  finishCounter: 0,
   speed: SIM_DEFAULT_SPEED,
   lapLength: 0,
   turn1Distance: null,
   turn2Distance: null,
   turn4Distance: null,
   turn6Distance: null,
+  startFinishDistance: null,
   drsZones: [],
   drsPickMode: null,
   drsDraftZone: {
@@ -847,6 +851,7 @@ function renderAll() {
 
 function initSimRacingSection() {
   const btn = document.getElementById('btnSimRacing');
+  const resetBtn = document.getElementById('btnSimReset');
   if (!btn) return;
 
   btn.addEventListener('click', () => {
@@ -865,7 +870,20 @@ function initSimRacingSection() {
     showToast('Simulation preview started at 1x speed.', 'success');
   });
 
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      stopSimRacingAnimation();
+      setSimResetButtonVisible(false);
+      setSimResultsTabVisible(false);
+      renderSimRacingPreview();
+      setSimStatus('Race reset. Click Sim Racing to start again.');
+      showToast('Race has been reset.', 'success');
+    });
+  }
+
   initSimDrsCoordinatePicker();
+  setSimResetButtonVisible(false);
+  setSimResultsTabVisible(false);
   renderSimRacingPreview();
 }
 
@@ -977,6 +995,8 @@ function renderSimRacingPreview() {
 
   if (!ready) {
     stopSimRacingAnimation();
+    setSimResetButtonVisible(false);
+    setSimResultsTabVisible(false);
     btn.textContent = 'Sim Racing';
     status.textContent = 'At least 2 teams are required to build the Monza grid.';
     markerWrap.innerHTML = '';
@@ -989,6 +1009,9 @@ function renderSimRacingPreview() {
     status.textContent = `Monza preview is ready. Speed is based on Power Unit (${SIM_POWER_UNIT_MAX} => ${SIM_MAX_SPEED_KMH} km/h).`;
   }
 
+  if (!simState.running) setSimResetButtonVisible(false);
+  if (!simState.running) setSimResultsTabVisible(false);
+
   const teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
   simState.teamsOnGrid = teamsOnGrid;
   simState.teamRuns = buildSimTeamRuns(teamsOnGrid);
@@ -997,6 +1020,7 @@ function renderSimRacingPreview() {
   if (path) {
     simState.lapLength = path.getTotalLength();
     updateSimBrakeDistances(path, simState.lapLength);
+    updateSimStartFinishDistance(path, simState.lapLength);
     updateSimDrsZones(path, simState.lapLength);
   }
 
@@ -1012,6 +1036,7 @@ function startSimRacingAnimation() {
   simState.speed = SIM_DEFAULT_SPEED;
   simState.startTs = performance.now();
   simState.lastTickTs = simState.startTs;
+  simState.finishCounter = 0;
   simState.running = true;
   simState.teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
   simState.teamRuns = buildSimTeamRuns(simState.teamsOnGrid).map(run => {
@@ -1028,20 +1053,25 @@ function startSimRacingAnimation() {
       drsTopSpeedKmh: run.speedKmh,
       ersActive: false,
       ersBoostKmh: 0,
-      gapAheadSec: null
+      gapAheadSec: null,
+      lapCrossings: 0,
+      finishTimeSec: null,
+      finishOrder: null,
+      finishedRace: false
     };
   });
   simState.lapLength = path.getTotalLength();
   updateSimBrakeDistances(path, simState.lapLength);
+  updateSimStartFinishDistance(path, simState.lapLength);
   updateSimDrsZones(path, simState.lapLength);
 
   const btn = document.getElementById('btnSimRacing');
   if (btn) btn.textContent = 'Stop Sim';
+  setSimResetButtonVisible(false);
+  setSimResultsTabVisible(false);
 
   setSimStatus('Simulation preview running. Cars use speed from Power Unit and can overtake.');
   renderRaceDotsAtTime(0);
-
-  const lapLength = path.getTotalLength();
 
   const tick = now => {
     if (!simState.running) return;
@@ -1053,7 +1083,23 @@ function startSimRacingAnimation() {
     const elapsedSec = (now - simState.startTs) / 1000;
     renderRaceDotsAtTime(elapsedSec, simState.lapLength);
 
-    simState.rafId = requestAnimationFrame(tick);
+    const raceResults = getSimRaceResults(simState.lapLength, SIM_RACE_TOTAL_LAPS);
+    if (raceResults) {
+      stopSimRacingAnimation();
+      setSimResetButtonVisible(true);
+      renderSimResultsTab(raceResults, SIM_RACE_TOTAL_LAPS);
+      setSimResultsTabVisible(true);
+      const podium = raceResults.slice(0, 3);
+      const podiumText = podium
+        .map((run, idx) => `P${idx + 1} ${run.tag} (${getSimRunDisplayName(run)}) ${Number(run.finishTimeSec || 0).toFixed(3)}s`)
+        .join(' · ');
+      setSimStatus(`Race finished (${SIM_RACE_TOTAL_LAPS} laps). Podium: ${podiumText}`);
+      return;
+    }
+
+    if (simState.running) {
+      simState.rafId = requestAnimationFrame(tick);
+    }
   };
 
   simState.rafId = requestAnimationFrame(tick);
@@ -1083,13 +1129,15 @@ function renderRaceDotsAtTime(elapsedSec, cachedLapLength) {
   const runs = simState.teamRuns.length > 0
     ? simState.teamRuns
     : buildSimTeamRuns(state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK));
+  const visibleRuns = runs.filter(run => !run.finishedRace);
 
-  if (runs.length < 2) {
+  if (visibleRuns.length < 1) {
     dotsLayer.innerHTML = drsZoneMarkup;
+    renderSimDriverTiming(runs, elapsedSec, lapLength);
     return;
   }
   const laneCenter = (SIM_LANE_COUNT - 1) / 2;
-  const raceDotMarkup = runs.map(run => {
+  const raceDotMarkup = visibleRuns.map(run => {
     const laneOffset = (run.laneIndex - laneCenter) * SIM_LANE_SPACING + run.uniqueLaneNudge;
     const rawDistance = typeof run.currentDistance === 'number'
       ? run.currentDistance
@@ -1175,6 +1223,19 @@ function updateSimBrakeDistances(path, lapLength) {
   simState.turn2Distance = findClosestDistanceOnPath(path, SIM_TURN2_MARKER.x, SIM_TURN2_MARKER.y, lapLength);
   simState.turn4Distance = findClosestDistanceOnPath(path, SIM_TURN4_MARKER.x, SIM_TURN4_MARKER.y, lapLength);
   simState.turn6Distance = findClosestDistanceOnPath(path, SIM_TURN6_MARKER.x, SIM_TURN6_MARKER.y, lapLength);
+}
+
+function updateSimStartFinishDistance(path, lapLength) {
+  if (!path || !lapLength) {
+    simState.startFinishDistance = null;
+    return;
+  }
+  simState.startFinishDistance = findClosestDistanceOnPath(
+    path,
+    SIM_START_FINISH_MARKER.x,
+    SIM_START_FINISH_MARKER.y,
+    lapLength
+  );
 }
 
 function updateSimDrsZones(path, lapLength) {
@@ -1404,6 +1465,9 @@ function getRequiredBrakeDecelKmhPerSec(currentSpeedKmh, distanceOnLap, currentP
 function advanceSimRuns(dtSec, lapLength) {
   if (!dtSec || dtSec <= 0 || !lapLength || !Array.isArray(simState.teamRuns)) return;
 
+  const elapsedSecNow = simState.startTs > 0 ? (simState.lastTickTs - simState.startTs) / 1000 : 0;
+  const elapsedSecAfterStep = elapsedSecNow + dtSec;
+
   const orderedRuns = simState.teamRuns
     .slice()
     .sort((a, b) => {
@@ -1428,6 +1492,18 @@ function advanceSimRuns(dtSec, lapLength) {
   });
 
   simState.teamRuns.forEach(run => {
+    if (run.finishedRace) {
+      run.currentSpeedKmh = 0;
+      run.currentPathSpeed = 0;
+      run.ersActive = false;
+      run.ersBoostKmh = 0;
+      run.drsActive = false;
+      run.drsZoneId = null;
+      run.drsEndDistance = null;
+      run.gapAheadSec = null;
+      return;
+    }
+
     if (typeof run.currentDistance !== 'number') {
       run.currentDistance = -run.gridOffset;
     }
@@ -1481,6 +1557,33 @@ function advanceSimRuns(dtSec, lapLength) {
     run.currentPathSpeed = (nextSpeed / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed;
     run.currentDistance += run.currentPathSpeed * dtSec;
     const nextDistanceOnLap = ((run.currentDistance % lapLength) + lapLength) % lapLength;
+
+    const finishLineDistance = simState.startFinishDistance;
+    const crossedStartFinishLine =
+      typeof finishLineDistance === 'number' &&
+      hasCrossedDistanceOnLap(previousDistanceOnLap, nextDistanceOnLap, finishLineDistance, lapLength);
+
+    let crossingTimeSec = null;
+    if (crossedStartFinishLine) {
+      const traveledOnLap = Math.max(
+        getForwardDistanceOnLap(previousDistanceOnLap, nextDistanceOnLap, lapLength),
+        1e-6
+      );
+      const distanceToLine = getForwardDistanceOnLap(previousDistanceOnLap, finishLineDistance, lapLength);
+      const crossingFraction = Math.max(0, Math.min(1, distanceToLine / traveledOnLap));
+      crossingTimeSec = elapsedSecNow + dtSec * crossingFraction;
+      run.lapCrossings = (Number(run.lapCrossings) || 0) + 1;
+    }
+
+    const completedLaps = getRunCompletedLaps(run, lapLength);
+    if (completedLaps >= SIM_RACE_TOTAL_LAPS && !run.finishedRace) {
+      run.finishedRace = true;
+      run.finishTimeSec = Number.isFinite(crossingTimeSec) ? crossingTimeSec : elapsedSecAfterStep;
+      simState.finishCounter += 1;
+      run.finishOrder = simState.finishCounter;
+      run.currentSpeedKmh = 0;
+      run.currentPathSpeed = 0;
+    }
 
     if (!run.drsActive && drsGapEligible && Array.isArray(simState.drsZones) && simState.drsZones.length > 0) {
       const activationZone = simState.drsZones.find(zone =>
@@ -1613,6 +1716,86 @@ function getTeamTag(teamName, customTag) {
 function setSimStatus(message) {
   const status = document.getElementById('simStatus');
   if (status) status.textContent = message;
+}
+
+function setSimResetButtonVisible(visible) {
+  const btn = document.getElementById('btnSimReset');
+  if (!btn) return;
+  btn.style.display = visible ? 'inline-flex' : 'none';
+}
+
+function setSimResultsTabVisible(visible) {
+  const tab = document.getElementById('simResultsTab');
+  if (!tab) return;
+  tab.style.display = visible ? 'block' : 'none';
+}
+
+function getRunRaceProgressDistance(run) {
+  const currentDistance = Number(run?.currentDistance) || 0;
+  const gridOffset = Number(run?.gridOffset) || 0;
+  return currentDistance + gridOffset;
+}
+
+function getRunCompletedLaps(run, lapLength) {
+  if (Number.isFinite(run?.lapCrossings)) {
+    return Math.max(0, Number(run.lapCrossings));
+  }
+  if (!lapLength) return 0;
+  return Math.max(0, Math.floor(getRunRaceProgressDistance(run) / lapLength));
+}
+
+function getSimRaceResults(lapLength, targetLaps) {
+  if (!lapLength || !targetLaps || !Array.isArray(simState.teamRuns) || simState.teamRuns.length === 0) return null;
+
+  const finishedRuns = simState.teamRuns.filter(run => run.finishedRace && Number.isFinite(run.finishTimeSec));
+  if (finishedRuns.length !== simState.teamRuns.length) return null;
+
+  return finishedRuns
+    .slice()
+    .sort((a, b) => {
+      const timeDiff = Number(a.finishTimeSec) - Number(b.finishTimeSec);
+      if (Math.abs(timeDiff) > 1e-6) return timeDiff;
+      const finishOrderDiff = (Number(a.finishOrder) || Number.POSITIVE_INFINITY) - (Number(b.finishOrder) || Number.POSITIVE_INFINITY);
+      if (finishOrderDiff !== 0) return finishOrderDiff;
+      return getRunRaceProgressDistance(b) - getRunRaceProgressDistance(a);
+    });
+}
+
+function getSimPodiumOnRaceFinish(lapLength, targetLaps) {
+  const results = getSimRaceResults(lapLength, targetLaps);
+  if (!results) return null;
+  return results.slice(0, 3);
+}
+
+function renderSimResultsTab(results, targetLaps) {
+  const body = document.getElementById('simResultsBody');
+  const meta = document.getElementById('simResultsMeta');
+  if (!body || !meta) return;
+
+  if (!Array.isArray(results) || results.length === 0) {
+    body.innerHTML = '<tr class="empty-row"><td colspan="6">No race result yet.</td></tr>';
+    meta.textContent = '';
+    return;
+  }
+
+  const leaderTime = Number(results[0]?.finishTimeSec) || 0;
+  meta.textContent = `${results.length} drivers classified · ${targetLaps} laps`;
+
+  body.innerHTML = results.map((run, idx) => {
+    const finishTime = Number(run.finishTimeSec) || 0;
+    const gapSec = Math.max(0, finishTime - leaderTime);
+    const gapLabel = idx === 0 ? 'Leader' : `+${gapSec.toFixed(3)}s`;
+    return `
+      <tr>
+        <td>P${idx + 1}</td>
+        <td>${escHtml(run.tag)}</td>
+        <td>${escHtml(getSimRunDisplayName(run))}</td>
+        <td>${escHtml(run.team.name)}</td>
+        <td>${finishTime.toFixed(3)}s</td>
+        <td>${gapLabel}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function initCarSetupSection() {
