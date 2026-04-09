@@ -1055,6 +1055,8 @@ function startSimRacingAnimation() {
       ersBoostKmh: 0,
       gapAheadSec: null,
       lapCrossings: 0,
+      distanceTargetReached: false,
+      distanceTargetReachedTimeSec: null,
       finishTimeSec: null,
       finishOrder: null,
       finishedRace: false
@@ -1195,7 +1197,8 @@ function renderSimDriverTiming(runs, elapsedSec, lapLength) {
       const intervalSec = intervalDistance / intervalSpeed;
       timing = `INT +${intervalSec.toFixed(3)}s`;
     }
-    const lap = Math.max(1, Math.floor(entry.rawDistance / lapLength) + 1);
+    const progressDistance = Math.max(0, entry.rawDistance + (Number(entry.run.gridOffset) || 0));
+    const lap = Math.max(1, Math.floor(progressDistance / lapLength) + 1);
     const runPathSpeed = Math.max(entry.run.currentPathSpeed || entry.run.pathSpeed, 0.0001);
     const lapTime = lapLength / runPathSpeed;
     const shownSpeed = Math.round(entry.run.currentSpeedKmh || entry.run.speedKmh);
@@ -1508,6 +1511,7 @@ function advanceSimRuns(dtSec, lapLength) {
       run.currentDistance = -run.gridOffset;
     }
 
+    const previousRaceProgress = getRunRaceProgressDistance(run);
     const wrappedDistance = ((run.currentDistance % lapLength) + lapLength) % lapLength;
     const previousDistanceOnLap = wrappedDistance;
     const referencePathSpeed = Math.max(run.currentPathSpeed || run.pathSpeed, 0.05);
@@ -1556,6 +1560,7 @@ function advanceSimRuns(dtSec, lapLength) {
     run.currentSpeedKmh = nextSpeed;
     run.currentPathSpeed = (nextSpeed / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED * simState.speed;
     run.currentDistance += run.currentPathSpeed * dtSec;
+    const currentRaceProgress = getRunRaceProgressDistance(run);
     const nextDistanceOnLap = ((run.currentDistance % lapLength) + lapLength) % lapLength;
 
     const finishLineDistance = simState.startFinishDistance;
@@ -1575,10 +1580,31 @@ function advanceSimRuns(dtSec, lapLength) {
       run.lapCrossings = (Number(run.lapCrossings) || 0) + 1;
     }
 
-    const completedLaps = getRunCompletedLaps(run, lapLength);
-    if (completedLaps >= SIM_RACE_TOTAL_LAPS && !run.finishedRace) {
+    const raceTargetDistance = SIM_RACE_TOTAL_LAPS * lapLength;
+    if (previousRaceProgress < raceTargetDistance && currentRaceProgress >= raceTargetDistance) {
+      const progressedThisStep = Math.max(currentRaceProgress - previousRaceProgress, 1e-6);
+      const distanceToTarget = raceTargetDistance - previousRaceProgress;
+      const completionFraction = Math.max(0, Math.min(1, distanceToTarget / progressedThisStep));
+      run.distanceTargetReached = true;
+      run.distanceTargetReachedTimeSec = elapsedSecNow + dtSec * completionFraction;
+    } else if (!run.distanceTargetReached && currentRaceProgress >= raceTargetDistance) {
+      run.distanceTargetReached = true;
+      run.distanceTargetReachedTimeSec = elapsedSecAfterStep;
+    }
+
+    const canFinishAtStartLine =
+      run.distanceTargetReached &&
+      crossedStartFinishLine &&
+      Number.isFinite(crossingTimeSec);
+    const canFinishWithoutStartLine =
+      run.distanceTargetReached &&
+      typeof finishLineDistance !== 'number';
+
+    if ((canFinishAtStartLine || canFinishWithoutStartLine) && !run.finishedRace) {
       run.finishedRace = true;
-      run.finishTimeSec = Number.isFinite(crossingTimeSec) ? crossingTimeSec : elapsedSecAfterStep;
+      run.finishTimeSec = canFinishAtStartLine
+        ? crossingTimeSec
+        : (Number(run.distanceTargetReachedTimeSec) || elapsedSecAfterStep);
       simState.finishCounter += 1;
       run.finishOrder = simState.finishCounter;
       run.currentSpeedKmh = 0;
@@ -1737,9 +1763,6 @@ function getRunRaceProgressDistance(run) {
 }
 
 function getRunCompletedLaps(run, lapLength) {
-  if (Number.isFinite(run?.lapCrossings)) {
-    return Math.max(0, Number(run.lapCrossings));
-  }
   if (!lapLength) return 0;
   return Math.max(0, Math.floor(getRunRaceProgressDistance(run) / lapLength));
 }
