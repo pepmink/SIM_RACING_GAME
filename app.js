@@ -197,11 +197,23 @@ const SIM_ERS_BATTERY_CAPACITY_REFERENCE_DEPLOY = 85;
 const SIM_ERS_BATTERY_CAPACITY_STEP_PER_DEPLOY = 2;
 const SIM_ERS_DRAIN_PERCENT_PER_SEC = 10;
 const SIM_ERS_CHARGE_PERCENT_PER_SEC = 5;
-const SIM_QUALIFYING_DURATION_SEC = 15 * 60;
+const SIM_RACE_ERS_MIN_SPEED_KMH = 250;
+const SIM_RACE_ERS_BASE_ACCEL_BOOST = 0.2;
+const SIM_RACE_ERS_BASE_SPEED_BOOST = 0.3;
+const SIM_RACE_ERS_REFERENCE_RATING = 95;
+const SIM_RACE_ERS_DROP_PER_POINT_95_TO_90 = 0.005;
+const SIM_RACE_ERS_DROP_PER_POINT_90_TO_85 = 0.05;
+const SIM_RACE_ERS_DROP_PER_POINT_85_TO_80 = 0.02;
+const SIM_RACE_ERS_DROP_PER_POINT_80_TO_70 = 0.01;
+const SIM_QUALIFYING_DURATION_SEC = 5 * 60;
 const SIM_QUALIFYING_MIN_TIME_SCALE = 1;
 const SIM_QUALIFYING_MAX_TIME_SCALE = 5;
 const SIM_QUALI_PIT_RELEASE_GAP_SEC = 8;
 const SIM_QUALI_PIT_SPEED_KMH = 80;
+const SIM_QUALI_PIT_TURNAROUND_SEC = 10;
+const SIM_RACE_GRID_STAGGER_GAP = 12;
+const SIM_RACE_GRID_POLE_LANE = 1;
+const SIM_RACE_GRID_SECOND_LANE = 2;
 const SIM_QUALI_ERS_MIN_SPEED_KMH = 270;
 const SIM_QUALI_ERS_EXTRA_ACCEL_MULTIPLIER = 1.05;
 const SIM_SESSION_PHASES = {
@@ -1184,14 +1196,34 @@ function readQualifyingSpeedMultiplier() {
 function getQualifiedRaceRuns(teamsOnGrid) {
   const runs = buildSimTeamRuns(teamsOnGrid);
   const order = Array.isArray(simState.qualifyingGridOrder) ? simState.qualifyingGridOrder : [];
-  if (order.length === 0) return runs;
+  if (order.length === 0) return assignRaceGridSlots(runs);
 
   const orderMap = new Map(order.map((key, idx) => [key, idx]));
-  return runs.slice().sort((a, b) => {
+  const sorted = runs.slice().sort((a, b) => {
     const idxA = orderMap.has(getSimRunIdentityKey(a)) ? orderMap.get(getSimRunIdentityKey(a)) : Number.POSITIVE_INFINITY;
     const idxB = orderMap.has(getSimRunIdentityKey(b)) ? orderMap.get(getSimRunIdentityKey(b)) : Number.POSITIVE_INFINITY;
     if (idxA !== idxB) return idxA - idxB;
     return 0;
+  });
+
+  return assignRaceGridSlots(sorted);
+}
+
+function assignRaceGridSlots(runs) {
+  if (!Array.isArray(runs)) return [];
+  const center = (runs.length - 1) / 2;
+
+  return runs.map((run, idx) => {
+    const laneIndex = idx % 2 === 0
+      ? SIM_RACE_GRID_POLE_LANE
+      : SIM_RACE_GRID_SECOND_LANE;
+
+    return {
+      ...run,
+      laneIndex,
+      gridOffset: idx * SIM_RACE_GRID_STAGGER_GAP,
+      uniqueLaneNudge: (idx - center) * 0.12
+    };
   });
 }
 
@@ -1383,6 +1415,8 @@ function startSimQualifyingSession() {
     pitDistance: 0,
     releasedFromPit: false,
     releaseDelaySec: idx * SIM_QUALI_PIT_RELEASE_GAP_SEC,
+    nextReleaseSec: idx * SIM_QUALI_PIT_RELEASE_GAP_SEC,
+    qualiPhase: 'WAIT_PIT',
     currentDistance: simState.pitExitDistance || 0,
     currentSpeedKmh: SIM_QUALI_PIT_SPEED_KMH,
     currentPathSpeed: 0,
@@ -1596,8 +1630,8 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
   simState.qualifyingRuns.forEach(run => {
     let activeDt = dtSec;
 
-    if (!run.releasedFromPit) {
-      const timeToRelease = (Number(run.releaseDelaySec) || 0) - elapsedBeforeStepSec;
+    if (run.qualiPhase === 'WAIT_PIT') {
+      const timeToRelease = (Number(run.nextReleaseSec) || 0) - elapsedBeforeStepSec;
       if (timeToRelease > dtSec) {
         run.currentSpeedKmh = 0;
         run.currentPathSpeed = 0;
@@ -1609,6 +1643,10 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
         return;
       }
       run.releasedFromPit = true;
+      run.qualiPhase = 'OUTLAP';
+      run.inPitLane = true;
+      run.pitDistance = 0;
+      run.outLapComplete = false;
       activeDt = Math.max(0, dtSec - Math.max(0, timeToRelease));
     }
 
@@ -1649,7 +1687,7 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
     const qualifyingSpeedBoostKmh = getQualifyingSpeedBoostKmh(run.qualifyingRating);
     const qualifyingAccelMultiplier = getQualifyingAccelMultiplier(run.qualifyingRating);
     const shouldDeployErs =
-      run.outLapComplete &&
+      run.qualiPhase === 'TIMED' &&
       currentBattery > SIM_ERS_MIN_BATTERY_TO_DEPLOY &&
       currentSpeed > SIM_QUALI_ERS_MIN_SPEED_KMH;
 
@@ -1725,11 +1763,32 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
     const crossingFraction = Math.max(0, Math.min(1, distanceToLine / traveledOnLap));
     const crossingTimeSec = elapsedBeforeStepSec + activeDt * crossingFraction;
 
-    if (!run.outLapComplete) {
+    if (run.qualiPhase === 'OUTLAP') {
       run.outLapComplete = true;
+      run.qualiPhase = 'TIMED';
       run.timedLapStartSec = crossingTimeSec;
       return;
     }
+
+    if (run.qualiPhase === 'COOLDOWN') {
+      run.inPitLane = false;
+      run.pitDistance = 0;
+      run.currentDistance = Number(simState.pitExitDistance) || 0;
+      run.currentSpeedKmh = 0;
+      run.currentPathSpeed = 0;
+      run.outLapComplete = false;
+      run.timedLapStartSec = null;
+      run.drsActive = false;
+      run.drsZoneId = null;
+      run.drsEndDistance = null;
+      run.ersActive = false;
+      run.ersBoostKmh = 0;
+      run.qualiPhase = 'WAIT_PIT';
+      run.nextReleaseSec = crossingTimeSec + SIM_QUALI_PIT_TURNAROUND_SEC;
+      return;
+    }
+
+    if (run.qualiPhase !== 'TIMED') return;
 
     if (!Number.isFinite(run.timedLapStartSec)) {
       run.timedLapStartSec = crossingTimeSec;
@@ -1747,7 +1806,8 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
     run.bestLapSec = Number.isFinite(run.bestLapSec)
       ? Math.min(Number(run.bestLapSec), lapTimeSec)
       : lapTimeSec;
-    run.timedLapStartSec = crossingTimeSec;
+    run.timedLapStartSec = null;
+    run.qualiPhase = 'COOLDOWN';
     if (!run.hasTimedLap) run.hasTimedLap = true;
   });
 
@@ -1774,7 +1834,7 @@ function renderQualifyingDotsAtTime(elapsedSec, cachedLapLength) {
     const teamTag = run.tag;
     let point;
 
-    if (!run.releasedFromPit) {
+    if (run.qualiPhase === 'WAIT_PIT') {
       point = pitPath.getPointAtLength(0);
     } else if (run.inPitLane) {
       const pitDistance = Math.max(0, Math.min(pitLength, Number(run.pitDistance) || 0));
@@ -1790,9 +1850,14 @@ function renderQualifyingDotsAtTime(elapsedSec, cachedLapLength) {
     const y = point.y + offsetY;
     const labelX = x + SIM_DOT_RADIUS + 3;
     const labelY = y - (SIM_DOT_RADIUS + 2);
-    const status = !run.releasedFromPit
+    const lapCount = Array.isArray(run.lapTimesSec) ? run.lapTimesSec.length : 0;
+    const status = run.qualiPhase === 'WAIT_PIT'
       ? 'WAIT PIT'
-      : (run.inPitLane ? 'PIT EXIT' : (run.outLapComplete ? 'TIMED LAP' : 'OUTLAP'));
+      : (run.inPitLane
+        ? 'PIT OUT'
+        : (run.qualiPhase === 'TIMED'
+          ? `TIMED (${lapCount})`
+          : (run.qualiPhase === 'COOLDOWN' ? 'COOLDOWN' : 'OUTLAP')));
     const speed = Math.round(Number(run.currentSpeedKmh) || 0);
     const bestText = Number.isFinite(run.bestLapSec) ? formatLapTimeSec(run.bestLapSec) : '--:--.---';
 
@@ -1823,9 +1888,13 @@ function renderQualifyingDriverTiming(runs, elapsedSec, lapLength) {
     const best = Number.isFinite(run.bestLapSec) ? formatLapTimeSec(run.bestLapSec) : '--:--.---';
     const last = Number.isFinite(run.lastLapSec) ? formatLapTimeSec(run.lastLapSec) : '--:--.---';
     const lapCount = Array.isArray(run.lapTimesSec) ? run.lapTimesSec.length : 0;
-    const status = !run.releasedFromPit
+    const status = run.qualiPhase === 'WAIT_PIT'
       ? 'WAIT PIT'
-      : (run.inPitLane ? 'PIT EXIT' : (run.outLapComplete ? `TIMED (${lapCount})` : 'OUTLAP'));
+      : (run.inPitLane
+        ? 'PIT OUT'
+        : (run.qualiPhase === 'TIMED'
+          ? `TIMED (${lapCount})`
+          : (run.qualiPhase === 'COOLDOWN' ? 'COOLDOWN' : 'OUTLAP')));
 
     return `
       <span class="sim-legend-item">
@@ -1861,7 +1930,7 @@ function renderSimQualifyingResultsTab(runs, elapsedSec, durationSec) {
 
   const list = Array.isArray(runs) ? runs : [];
   if (list.length === 0) {
-    body.innerHTML = '<tr class="empty-row"><td colspan="6">No qualifying lap recorded yet.</td></tr>';
+    body.innerHTML = '<tr class="empty-row"><td colspan="5">No qualifying lap recorded yet.</td></tr>';
     meta.textContent = '';
     return;
   }
@@ -1876,9 +1945,6 @@ function renderSimQualifyingResultsTab(runs, elapsedSec, durationSec) {
   body.innerHTML = classified.map((run, idx) => {
     const best = Number.isFinite(run.bestLapSec) ? formatLapTimeSec(run.bestLapSec) : '--:--.---';
     const last = Number.isFinite(run.lastLapSec) ? formatLapTimeSec(run.lastLapSec) : '--:--.---';
-    const lapLog = Array.isArray(run.lapTimesSec) && run.lapTimesSec.length > 0
-      ? run.lapTimesSec.map(sec => formatLapTimeSec(sec)).join(' | ')
-      : '-';
 
     return `
       <tr>
@@ -1887,7 +1953,6 @@ function renderSimQualifyingResultsTab(runs, elapsedSec, durationSec) {
         <td>${escHtml(getSimRunDisplayName(run))}</td>
         <td>${best}</td>
         <td>${last}</td>
-        <td>${escHtml(lapLog)}</td>
       </tr>
     `;
   }).join('');
@@ -2226,6 +2291,36 @@ function getErsChargeRatePercentPerSec(ersDeployRating) {
   return SIM_ERS_CHARGE_PERCENT_PER_SEC;
 }
 
+function getRaceErsEffectiveness(ersDeployRating) {
+  const normalized = Math.min(SIM_RACE_ERS_REFERENCE_RATING, normalizeErsDeployRating(ersDeployRating));
+  const rating = Math.max(70, normalized);
+  let reduction = 0;
+
+  if (rating < 95) {
+    reduction += (95 - Math.max(rating, 90)) * SIM_RACE_ERS_DROP_PER_POINT_95_TO_90;
+  }
+  if (rating < 90) {
+    reduction += (90 - Math.max(rating, 85)) * SIM_RACE_ERS_DROP_PER_POINT_90_TO_85;
+  }
+  if (rating < 85) {
+    reduction += (85 - Math.max(rating, 80)) * SIM_RACE_ERS_DROP_PER_POINT_85_TO_80;
+  }
+  if (rating < 80) {
+    reduction += (80 - Math.max(rating, 70)) * SIM_RACE_ERS_DROP_PER_POINT_80_TO_70;
+  }
+
+  return Math.max(0, 1 - reduction);
+}
+
+function getRaceErsAccelMultiplier(ersDeployRating) {
+  return 1 + SIM_RACE_ERS_BASE_ACCEL_BOOST * getRaceErsEffectiveness(ersDeployRating);
+}
+
+function getRaceErsSpeedBoostKmh(baseSpeedKmh, ersDeployRating) {
+  const baseSpeed = Math.max(0, Number(baseSpeedKmh) || 0);
+  return baseSpeed * SIM_RACE_ERS_BASE_SPEED_BOOST * getRaceErsEffectiveness(ersDeployRating);
+}
+
 function getRequiredBrakeDecelKmhPerSec(currentSpeedKmh, distanceOnLap, currentPathSpeed, lapLength) {
   const constraints = [
     { turnDistance: simState.turn1Distance, targetSpeed: SIM_TURN1_ENTRY_KMH },
@@ -2319,9 +2414,9 @@ function advanceSimRuns(dtSec, lapLength) {
     const currentSpeed = typeof run.currentSpeedKmh === 'number' ? run.currentSpeedKmh : run.speedKmh;
     const shouldDeployErs =
       currentBattery > SIM_ERS_MIN_BATTERY_TO_DEPLOY &&
-      currentSpeed >= drsTopSpeedKmh - 0.5;
+      currentSpeed >= SIM_RACE_ERS_MIN_SPEED_KMH;
 
-    const ersBoostKmh = shouldDeployErs ? getErsBoostKmh(ersDeployRating) : 0;
+    const ersBoostKmh = shouldDeployErs ? getRaceErsSpeedBoostKmh(run.speedKmh, ersDeployRating) : 0;
     const baseSpeedWithErs = drsTopSpeedKmh + ersBoostKmh;
     const targetSpeedKmh = getBrakeTargetSpeedKmh(baseSpeedWithErs, wrappedDistance, lapLength);
 
@@ -2330,7 +2425,7 @@ function advanceSimRuns(dtSec, lapLength) {
     const decelStep = decelRate * dtSec;
     const accelMultiplier =
       (drsActiveForStep ? SIM_DRS_ACCEL_MULTIPLIER : 1) *
-      (shouldDeployErs ? SIM_ERS_ACCEL_MULTIPLIER : 1);
+      (shouldDeployErs ? getRaceErsAccelMultiplier(ersDeployRating) : 1);
     const accelStep = SIM_ACCEL_KMH_PER_SEC * accelMultiplier * dtSec;
 
     let nextSpeed = currentSpeed;
@@ -2567,11 +2662,22 @@ function updateSimSessionFlowUI() {
   const flowRace = document.getElementById('simFlowRace');
   const flowFinished = document.getElementById('simFlowFinished');
   const progress = document.getElementById('simQualifyingProgress');
+  const qualifyingControls = document.querySelector('#section-sim-racing .sim-qual-controls');
+  const showQualifyingUi =
+    simState.sessionPhase === SIM_SESSION_PHASES.QUALIFYING_PENDING ||
+    simState.sessionPhase === SIM_SESSION_PHASES.QUALIFYING_RUNNING;
 
   const totalCars = Math.max(0, Number(simState.qualifyingTotalCars) || 0);
   const finishedCars = Math.max(0, Math.min(totalCars, Number(simState.qualifyingFinishedCars) || 0));
   if (progress) {
+    progress.style.display = showQualifyingUi ? 'block' : 'none';
     progress.textContent = `Qualifying progress: ${finishedCars} / ${totalCars} cars have timed laps.`;
+  }
+  if (qualifyingControls) {
+    qualifyingControls.style.display = showQualifyingUi ? 'flex' : 'none';
+  }
+  if (!showQualifyingUi) {
+    setSimQualifyingResultsTabVisible(false);
   }
 
   [flowQualifying, flowRace, flowFinished].forEach(node => {
