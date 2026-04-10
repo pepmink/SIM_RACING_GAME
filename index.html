@@ -425,12 +425,33 @@
           <h3>&#127949; Sim Racing - Monza Preview</h3>
         </div>
         <div class="form-body">
-          <p class="sim-note">Complete team and car setup first, then click Sim Racing to enter simulation mode (in development).</p>
+          <p class="sim-note">Race weekend flow: complete Qualifying first, then start the Race session.</p>
+
+          <div class="sim-session-flow" id="simSessionFlow" aria-live="polite">
+            <span class="sim-flow-step is-active" id="simFlowQualifying">1. Qualifying</span>
+            <span class="sim-flow-step" id="simFlowRace">2. Race</span>
+            <span class="sim-flow-step" id="simFlowFinished">3. Results</span>
+          </div>
+
+          <div class="sim-qual-progress" id="simQualifyingProgress">Qualifying progress: 0 / 0 cars have timed laps.</div>
 
           <div class="sim-actions">
-            <button type="button" class="btn btn-primary" id="btnSimRacing">Sim Racing</button>
+            <button type="button" class="btn btn-ghost" id="btnSimQualifying">Start Qualifying</button>
+            <button type="button" class="btn btn-primary" id="btnSimRacing">Start Race</button>
             <button type="button" class="btn btn-secondary" id="btnSimReset" style="display:none">Lam moi</button>
             <span class="sim-status" id="simStatus">At least 2 teams are required to build the grid.</span>
+          </div>
+
+          <div class="sim-qual-controls">
+            <label class="sim-qual-label" for="simQualifyingSpeed">Qualifying Speed</label>
+            <select id="simQualifyingSpeed" class="sim-qual-speed-select">
+              <option value="1">x1</option>
+              <option value="2">x2</option>
+              <option value="3">x3</option>
+              <option value="4">x4</option>
+              <option value="5">x5</option>
+            </select>
+            <span class="sim-qual-timer" id="simQualifyingTimer">Q time left: 15:00.000</span>
           </div>
 
           <div class="sim-drs-tools">
@@ -444,7 +465,7 @@
             <svg class="monza-track" viewBox="-20 0 860 450" aria-label="Monza track preview" role="img">
               <rect x="-20" y="0" width="860" height="450" fill="white" />
 
-              <path d="M 760 372 L 580 372 C 570 372 560 375 550 378 L 415 378" fill="none" stroke="#bdc3c7" stroke-width="4" />
+              <path id="monzaPitLaneLine" d="M 760 372 L 580 372 C 570 372 560 375 550 378 L 415 378" fill="none" stroke="#bdc3c7" stroke-width="4" />
               <text x="760" y="365" font-family="Arial" font-size="12" font-weight="bold" text-anchor="end">PIT IN</text>
               <text x="510" y="370" font-family="Arial" font-size="12" font-weight="bold">PIT OUT</text>
 
@@ -495,6 +516,28 @@
           </div>
 
           <div class="sim-team-legend" id="simTeamLegend"></div>
+
+          <div class="sim-results-tab" id="simQualifyingResultsTab" style="display:none">
+            <div class="sim-results-header">
+              <h4>Qualifying Results</h4>
+              <span class="sim-results-meta" id="simQualifyingMeta"></span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table sim-results-table">
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>Tag</th>
+                    <th>Driver</th>
+                    <th>Best Lap</th>
+                    <th>Last Lap</th>
+                    <th>Lap Log</th>
+                  </tr>
+                </thead>
+                <tbody id="simQualifyingBody"></tbody>
+              </table>
+            </div>
+          </div>
 
           <div class="sim-results-tab" id="simResultsTab" style="display:none">
             <div class="sim-results-header">
