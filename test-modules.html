@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ES6 Modules Test</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a1a1a;
+      color: #00ff00;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1 { color: #00ffff; }
+    .test { 
+      background: #2a2a2a; 
+      padding: 15px; 
+      margin: 10px 0; 
+      border-left: 4px solid #00ff00;
+    }
+    .pass { border-left-color: #00ff00; }
+    .fail { border-left-color: #ff0000; color: #ff0000; }
+    pre { 
+      background: #0a0a0a; 
+      padding: 10px; 
+      overflow-x: auto;
+      border: 1px solid #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 ES6 Modules Integration Test</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    const results = document.getElementById('results');
+    
+    function addTest(name, passed, details = '') {
+      const div = document.createElement('div');
+      div.className = `test ${passed ? 'pass' : 'fail'}`;
+      div.innerHTML = `
+        <strong>${passed ? '✅' : '❌'} ${name}</strong>
+        ${details ? `<pre>${details}</pre>` : ''}
+      `;
+      results.appendChild(div);
+    }
+
+    // Test 1: Check if modules loaded
+    setTimeout(() => {
+      addTest(
+        'Wing Setup Module Loaded',
+        typeof window.wingSetup !== 'undefined',
+        `window.wingSetup = ${JSON.stringify(Object.keys(window.wingSetup || {}), null, 2)}`
+      );
+
+      // Test 2: Check constants
+      addTest(
+        'Wing Constants Loaded',
+        typeof window.WING_CONSTANTS !== 'undefined',
+        `WING_SETUP_NEUTRAL_POINT = ${window.WING_CONSTANTS?.WING_SETUP_NEUTRAL_POINT}`
+      );
+
+      // Test 3: Check championships data
+      addTest(
+        'Championships Data Loaded',
+        typeof window.CHAMPIONSHIPS_DATA !== 'undefined',
+        `Championships: ${Object.keys(window.CHAMPIONSHIPS_DATA || {}).join(', ')}`
+      );
+
+      // Test 4: Check teams data
+      const teamsLoaded = window.DEFAULT_TEAMS_BY_CHAMP?.f1?.length > 0;
+      addTest(
+        'F1 Teams Data Loaded',
+        teamsLoaded,
+        `F1 Teams count: ${window.DEFAULT_TEAMS_BY_CHAMP?.f1?.length || 0}`
+      );
+
+      // Test 5: Check if teams have setup property
+      const firstTeam = window.DEFAULT_TEAMS_BY_CHAMP?.f1?.[0];
+      const hasSetup = firstTeam?.setup && 
+                       typeof firstTeam.setup.frontWing === 'number' &&
+                       typeof firstTeam.setup.rearWing === 'number';
+      addTest(
+        'Teams Have Setup Property',
+        hasSetup,
+        `First team setup: ${JSON.stringify(firstTeam?.setup, null, 2)}`
+      );
+
+      // Test 6: Test wing modifier calculation
+      if (window.wingSetup) {
+        const frontMods = window.wingSetup.getFrontWingModifiers(20);
+        addTest(
+          'Front Wing Modifiers (20)',
+          frontMods.overtaking > 0 && frontMods.defending > 0,
+          `Modifiers: ${JSON.stringify(frontMods, null, 2)}`
+        );
+
+        const rearMods = window.wingSetup.getRearWingModifiers(15);
+        addTest(
+          'Rear Wing Modifiers (15)',
+          rearMods.braking > 0,
+          `Modifiers: ${JSON.stringify(rearMods, null, 2)}`
+        );
+      }
+
+      // Test 7: Test Monza optimization
+      if (window.wingSetup && firstTeam) {
+        const driver = window.DEFAULT_DRIVERS_BY_CHAMP?.f1?.[0];
+        if (driver) {
+          const optimal = window.wingSetup.calculateOptimalSetupForMonza(firstTeam, driver);
+          addTest(
+            'Monza Optimization',
+            optimal.frontWing >= 15 && optimal.frontWing <= 35 &&
+            optimal.rearWing >= 10 && optimal.rearWing <= 30,
+            `Optimal setup: ${JSON.stringify(optimal, null, 2)}`
+          );
+        }
+      }
+
+      // Test 8: Check if app.js loaded
+      setTimeout(() => {
+        addTest(
+          'app.js Loaded',
+          typeof CHAMPIONSHIPS !== 'undefined',
+          'CHAMPIONSHIPS variable exists in global scope'
+        );
+      }, 1000);
+
+    }, 500);
+  </script>
+</body>
+</html>

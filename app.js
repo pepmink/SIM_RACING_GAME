@@ -3,7 +3,8 @@
 // ============================================================
 
 // ---------- Championship Config ----------
-const CHAMPIONSHIPS = {
+// CHAMPIONSHIPS now loaded from ES6 modules via main.js
+const CHAMPIONSHIPS = window.CHAMPIONSHIPS_DATA || {
   f1: {
     id: 'f1',
     name: 'Formula 1',
@@ -27,89 +28,22 @@ const CHAMPIONSHIPS = {
   }
 };
 
-const DEFAULT_TEAMS_BY_CHAMP = {
-  f1: [
-    { seedId: 'alpine', name: 'BWT Alpine F1 Team', country: 'France', car: 'A525', category: 'F1', color: '#0090ff', budget: 470, carSetup: { powerUnit: 78, downforce: 77, chassis: 71, reliability: 75, ersDeploy: 86, tyreDegradation: 41 } },
-    { seedId: 'aston-martin', name: 'Aston Martin Aramco F1 Team', country: 'United Kingdom', car: 'AMR25', category: 'F1', color: '#006f62', budget: 520, carSetup: { powerUnit: 82, downforce: 78, chassis: 86, reliability: 81, ersDeploy: 88, tyreDegradation: 27 } },
-    { seedId: 'ferrari', name: 'Scuderia Ferrari HP', country: 'Italy', car: 'SF-25', category: 'F1', color: '#e10600', budget: 680, carSetup: { powerUnit: 85, downforce: 83, chassis: 89, reliability: 92, ersDeploy: 90, tyreDegradation: 20 } },
-    { seedId: 'haas', name: 'MoneyGram Haas F1 Team', country: 'United States', car: 'VF-25', category: 'F1', color: '#b6babd', budget: 310, carSetup: { powerUnit: 83, downforce: 81, chassis: 77, reliability: 86, ersDeploy: 78, tyreDegradation: 26 } },
-    { seedId: 'sauber', name: 'Stake F1 Team Kick Sauber', country: 'Switzerland', car: 'C45', category: 'F1', color: '#00e701', budget: 300, carSetup: { powerUnit: 82, downforce: 78, chassis: 81, reliability: 77, ersDeploy: 82, tyreDegradation: 36 } },
-    { seedId: 'mclaren', name: 'McLaren Formula 1 Team', country: 'United Kingdom', car: 'MCL39', category: 'F1', color: '#ff8700', budget: 640, carSetup: { powerUnit: 90, downforce: 95, chassis: 96, reliability: 90, ersDeploy: 85, tyreDegradation: 15 } },
-    { seedId: 'mercedes', name: 'Mercedes-AMG Petronas F1 Team', country: 'Germany', car: 'F1 W16', category: 'F1', color: '#00d2be', budget: 630, carSetup: { powerUnit: 95, downforce: 87, chassis: 91, reliability: 97, ersDeploy: 90, tyreDegradation: 35 } },
-    { seedId: 'racing-bulls', name: 'Visa Cash App Racing Bulls F1 Team', country: 'Italy', car: 'VCARB 02', category: 'F1', color: '#2b5db7', budget: 360, carSetup: { powerUnit: 86, downforce: 82, chassis: 83, reliability: 90, ersDeploy: 92, tyreDegradation: 35 } },
-    { seedId: 'red-bull', name: 'Oracle Red Bull Racing', country: 'Austria', car: 'RB21', category: 'F1', color: '#1e41ff', budget: 700, carSetup: { powerUnit: 93, downforce: 92, chassis: 93, reliability: 95, ersDeploy: 92, tyreDegradation: 25 } },
-    { seedId: 'williams', name: 'Atlassian Williams Racing', country: 'United Kingdom', car: 'FW47', category: 'F1', color: '#005aff', budget: 390, carSetup: { powerUnit: 91, downforce: 83, chassis: 86, reliability: 82, ersDeploy: 87, tyreDegradation: 31 } }
-  ],
-  wec: [
-    { seedId: 'titan-hypercar', name: 'Titan Hypercar', country: 'Japan', car: 'TH-01H', category: 'Hypercar', color: '#0066cc', budget: 420 },
-    { seedId: 'enduro-proton', name: 'Enduro Proton', country: 'Germany', car: 'EP-LMP2', category: 'LMP2', color: '#1f95ff', budget: 260 },
-    { seedId: 'crimson-lemans', name: 'Crimson LeMans', country: 'Italy', car: 'CL-GTE', category: 'GTE Pro', color: '#d7263d', budget: 310 }
-  ],
-  gt: [
-    { seedId: 'night-owl', name: 'Night Owl Motorsport', country: 'Belgium', car: 'NOM GT3', category: 'GT3', color: '#00a651', budget: 180 },
-    { seedId: 'velocity-garage', name: 'Velocity Garage', country: 'United States', car: 'VG GT4', category: 'GT4', color: '#19bf6a', budget: 145 },
-    { seedId: 'sunset-dynamics', name: 'Sunset Dynamics', country: 'Spain', car: 'SD GT2', category: 'GT2', color: '#f39c12', budget: 170 }
-  ]
-};
-
-const DEFAULT_DRIVERS_BY_CHAMP = {
-  f1: [
-    { seedId: 'gasly', first: 'Pierre', last: 'Gasly', number: 10, nationality: 'French', teamSeedId: 'alpine', skills: { cornering: 83, braking: 84, reactions: 85, accuracy: 75, control: 89, smooth: 76, adaptability: 81, overtaking: 87, defending: 82 } },
-    { seedId: 'colapinto', first: 'Franco', last: 'Colapinto', number: 7, nationality: 'Australian', teamSeedId: 'alpine', skills: { cornering: 78, braking: 77, reactions: 75, accuracy: 86, control: 81, smooth: 72, adaptability: 85, overtaking: 86, defending: 85 } },
-
-    { seedId: 'alonso', first: 'Fernando', last: 'Alonso', number: 14, nationality: 'Spanish', teamSeedId: 'aston-martin', skills: { cornering: 85, braking: 81, reactions: 80, accuracy: 89, control: 95, smooth: 96, adaptability: 82, overtaking: 83, defending: 95 } },
-    { seedId: 'stroll', first: 'Lance', last: 'Stroll', number: 18, nationality: 'Canadian', teamSeedId: 'aston-martin', skills: { cornering: 81, braking: 78, reactions: 77, accuracy: 85, control: 82, smooth: 80, adaptability: 85, overtaking: 78, defending: 77 } },
-
-    { seedId: 'leclerc', first: 'Charles', last: 'Leclerc', number: 16, nationality: 'Monegasque', teamSeedId: 'ferrari', skills: { cornering: 93, braking: 89, reactions: 92, accuracy: 91, control: 90, smooth: 85, adaptability: 90, overtaking: 91, defending: 85 } },
-    { seedId: 'hamilton', first: 'Lewis', last: 'Hamilton', number: 44, nationality: 'British', teamSeedId: 'ferrari', skills: { cornering: 87, braking: 93, reactions: 82, accuracy: 95, control: 96, smooth: 88, adaptability: 83, overtaking: 85, defending: 90 } },
-
-    { seedId: 'ocon', first: 'Esteban', last: 'Ocon', number: 31, nationality: 'French', teamSeedId: 'haas', skills: { cornering: 80, braking: 75, reactions: 81, accuracy: 88, control: 82, smooth: 81, adaptability: 73, overtaking: 78, defending: 88 } },
-    { seedId: 'bearman', first: 'Oliver', last: 'Bearman', number: 87, nationality: 'British', teamSeedId: 'haas', skills: { cornering: 84, braking: 83, reactions: 78, accuracy: 85, control: 86, smooth: 75, adaptability: 78, overtaking: 89, defending: 81 } },
-
-    { seedId: 'bortoleto', first: 'Gabriel', last: 'Bortoleto', number: 5, nationality: 'Brazilian', teamSeedId: 'sauber', skills: { cornering: 80, braking: 81, reactions: 73, accuracy: 72, control: 88, smooth: 78, adaptability: 79, overtaking: 85, defending: 89 } },
-    { seedId: 'hulkenberg', first: 'Nico', last: 'Hulkenberg', number: 27, nationality: 'German', teamSeedId: 'sauber', skills: { cornering: 82, braking: 78, reactions: 85, accuracy: 80, control: 81, smooth: 82, adaptability: 72, overtaking: 76, defending: 93 } },
-
-    { seedId: 'norris', first: 'Lando', last: 'Norris', number: 4, nationality: 'British', teamSeedId: 'mclaren', skills: { cornering: 88, braking: 85, reactions: 92, accuracy: 93, control: 94, smooth: 92, adaptability: 87, overtaking: 91, defending: 93 } },
-    { seedId: 'piastri', first: 'Oscar', last: 'Piastri', number: 81, nationality: 'Australian', teamSeedId: 'mclaren', skills: { cornering: 85, braking: 87, reactions: 94, accuracy: 95, control: 90, smooth: 87, adaptability: 83, overtaking: 96, defending: 82 } },
-
-    { seedId: 'antonelli', first: 'Kimi', last: 'Antonelli', number: 12, nationality: 'Italian', teamSeedId: 'mercedes', skills: { cornering: 86, braking: 83, reactions: 86, accuracy: 78, control: 75, smooth: 71, adaptability: 81, overtaking: 92, defending: 82 } },
-    { seedId: 'russell', first: 'George', last: 'Russell', number: 63, nationality: 'British', teamSeedId: 'mercedes', skills: { cornering: 88, braking: 89, reactions: 81, accuracy: 92, control: 93, smooth: 90, adaptability: 85, overtaking: 89, defending: 94 } },
-
-    { seedId: 'hadjar', first: 'Isack', last: 'Hadjar', number: 6, nationality: 'French', teamSeedId: 'racing-bulls', skills: { cornering: 87, braking: 81, reactions: 88, accuracy: 76, control: 77, smooth: 73, adaptability: 79, overtaking: 88, defending: 85 } },
-    { seedId: 'lawson', first: 'Liam', last: 'Lawson', number: 30, nationality: 'New Zealander', teamSeedId: 'racing-bulls', skills: { cornering: 82, braking: 78, reactions: 83, accuracy: 81, control: 82, smooth: 83, adaptability: 75, overtaking: 82, defending: 88 } },
-
-    { seedId: 'verstappen', first: 'Max', last: 'Verstappen', number: 1, nationality: 'Dutch', teamSeedId: 'red-bull', skills: { cornering: 95, braking: 96, reactions: 90, accuracy: 87, control: 94, smooth: 82, adaptability: 98, overtaking: 96, defending: 93 } },
-    { seedId: 'tsunoda', first: 'Yuki', last: 'Tsunoda', number: 22, nationality: 'Japanese', teamSeedId: 'red-bull', skills: { cornering: 85, braking: 80, reactions: 87, accuracy: 75, control: 70, smooth: 87, adaptability: 83, overtaking: 80, defending: 89 } },
-
-    { seedId: 'albon', first: 'Alexander', last: 'Albon', number: 23, nationality: 'Thai', teamSeedId: 'williams', skills: { cornering: 82, braking: 81, reactions: 90, accuracy: 88, control: 82, smooth: 84, adaptability: 80, overtaking: 86, defending: 81 } },
-    { seedId: 'sainz', first: 'Carlos', last: 'Sainz Jr.', number: 55, nationality: 'Spanish', teamSeedId: 'williams', skills: { cornering: 90, braking: 85, reactions: 89, accuracy: 85, control: 86, smooth: 96, adaptability: 78, overtaking: 82, defending: 87 } }
-  ],
+// DEFAULT_TEAMS_BY_CHAMP now loaded from ES6 modules via main.js
+const DEFAULT_TEAMS_BY_CHAMP = window.DEFAULT_TEAMS_BY_CHAMP || {
+  f1: [],
   wec: [],
   gt: []
 };
 
-const F1_2025_QUALIFYING_BY_SEED = {
-  gasly: 86,
-  colapinto: 77,
-  alonso: 91,
-  stroll: 75,
-  leclerc: 95,
-  hamilton: 87,
-  ocon: 80,
-  bearman: 86,
-  bortoleto: 83,
-  hulkenberg: 84,
-  norris: 91,
-  piastri: 93,
-  antonelli: 85,
-  russell: 94,
-  hadjar: 87,
-  lawson: 81,
-  verstappen: 98,
-  tsunoda: 80,
-  albon: 82,
-  sainz: 88
+// DEFAULT_DRIVERS_BY_CHAMP now loaded from ES6 modules via main.js
+const DEFAULT_DRIVERS_BY_CHAMP = window.DEFAULT_DRIVERS_BY_CHAMP || {
+  f1: [],
+  wec: [],
+  gt: []
 };
+
+// F1_2025_QUALIFYING_BY_SEED now loaded from ES6 modules via main.js
+const F1_2025_QUALIFYING_BY_SEED = window.F1_2025_QUALIFYING_BY_SEED || {};
 
 let currentChampionship = null;
 
@@ -170,6 +104,9 @@ const SIM_TURN10_MARKER = { x: 525, y: 260 };
 const SIM_TURN11_MARKER = { x: 785, y: 260 };
 const SIM_START_FINISH_MARKER = { x: 600, y: 380.9 };
 const SIM_PIT_EXIT_MARKER = { x: 415, y: 378 };
+const SIM_PIT_ENTRY_MARKER = { x: 790, y: 380 };
+const SIM_PIT_BOX_START = { x: 586.8, y: 368.7 };
+const SIM_PIT_BOX_END = { x: 740.3, y: 372 };
 const SIM_DRS_OVERLAY_SAMPLE_SPACING = 8;
 const SIM_DRS_ZONE_CONFIGS = [
   {
@@ -265,6 +202,7 @@ const simState = {
   qualifiedGridSignature: null,
   qualifyingGridOrder: [],
   pitExitDistance: null,
+  pitEntryDistance: null,
   pitLaneLength: 0
 };
 
@@ -278,18 +216,9 @@ const state = {
 };
 
 // ---------- Init ----------
-document.addEventListener('DOMContentLoaded', () => {
-  initNavigation();
-  initTeamForm();
-  initCarSetupSection();
-  initSimRacingSection();
-  initDriverForm();
-  initSearch();
-  initColorPicker();
-  initFormToggles();
-  initSpeedometer();
-  openChampionshipScreen(); // always show on load
-});
+// Note: DOMContentLoaded already fired when this script loads (loaded by main.js after DOM ready)
+// So we call init functions directly instead of waiting for DOMContentLoaded
+// MOVED TO END OF FILE to ensure all variables are declared first
 
 // ============================================================
 //  CHAMPIONSHIP SELECTION
@@ -1069,58 +998,52 @@ function initSimRacingSection() {
 }
 
 function initSimDrsCoordinatePicker() {
-  const btnStart = document.getElementById('btnPickDrsStart');
-  const btnEnd = document.getElementById('btnPickDrsEnd');
-  const btnCopy = document.getElementById('btnCopyDrsCoords');
+  const btnShow = document.getElementById('btnShowCoordinates');
+  const btnCopy = document.getElementById('btnCopyCoordinates');
   const trackSvg = document.querySelector('#section-sim-racing .monza-track');
-  if (!btnStart || !btnEnd || !btnCopy || !trackSvg) return;
+  if (!btnShow || !btnCopy || !trackSvg) return;
 
-  btnStart.addEventListener('click', () => {
-    simState.drsPickMode = 'start';
+  // Toggle coordinate viewing mode
+  btnShow.addEventListener('click', () => {
+    simState.drsPickMode = simState.drsPickMode === 'view' ? null : 'view';
     updateSimDrsPickerUI();
-    setSimStatus('DRS picker: click on track to set START coordinate.');
+    if (simState.drsPickMode === 'view') {
+      setSimStatus('Coordinate viewer: click anywhere on track to see coordinates.');
+    } else {
+      setSimStatus('Coordinate viewer disabled.');
+    }
   });
 
-  btnEnd.addEventListener('click', () => {
-    simState.drsPickMode = 'end';
-    updateSimDrsPickerUI();
-    setSimStatus('DRS picker: click on track to set END coordinate.');
-  });
-
+  // Copy last clicked coordinate
   btnCopy.addEventListener('click', async () => {
-    const start = simState.drsDraftZone.startMarker;
-    const end = simState.drsDraftZone.endMarker;
-    if (!start || !end) {
-      showToast('Pick both START and END coordinates first.', 'info');
+    const lastCoord = simState.drsDraftZone.startMarker;
+    if (!lastCoord) {
+      showToast('Click on track first to get coordinates.', 'info');
       return;
     }
 
-    const configText = `{ id: 'DRS X', startMarker: { x: ${start.x}, y: ${start.y} }, endMarker: { x: ${end.x}, y: ${end.y} } }`;
+    const coordText = `{ x: ${lastCoord.x}, y: ${lastCoord.y} }`;
     try {
-      await navigator.clipboard.writeText(configText);
-      showToast('DRS coordinates copied to clipboard.', 'success');
+      await navigator.clipboard.writeText(coordText);
+      showToast('Coordinates copied to clipboard.', 'success');
     } catch (_error) {
       showToast('Could not copy automatically. Coordinate text is shown below.', 'warning');
     }
-    setSimStatus(`DRS config: ${configText}`);
+    setSimStatus(`Coordinates: ${coordText}`);
   });
 
+  // Show coordinates on click
   trackSvg.addEventListener('click', event => {
-    if (!simState.drsPickMode) return;
+    if (simState.drsPickMode !== 'view') return;
     const picked = getSvgCoordinateFromEvent(trackSvg, event);
     if (!picked) return;
 
-    if (simState.drsPickMode === 'start') {
-      simState.drsDraftZone.startMarker = picked;
-      showToast(`DRS START set at (${picked.x}, ${picked.y})`, 'success');
-    } else {
-      simState.drsDraftZone.endMarker = picked;
-      showToast(`DRS END set at (${picked.x}, ${picked.y})`, 'success');
-    }
-
-    simState.drsPickMode = null;
+    // Store last clicked coordinate
+    simState.drsDraftZone.startMarker = picked;
+    
+    // Show coordinate in UI
+    showToast(`Coordinates: (${picked.x}, ${picked.y})`, 'info');
     updateSimDrsPickerUI();
-    renderSimRacingPreview();
   });
 
   updateSimDrsPickerUI();
@@ -1141,22 +1064,67 @@ function getSvgCoordinateFromEvent(svg, event) {
   };
 }
 
+function getPitBoxPositionForTeam(teamIndex, totalTeams) {
+  // Calculate position along the line between SIM_PIT_BOX_START and SIM_PIT_BOX_END
+  if (totalTeams <= 1) return SIM_PIT_BOX_START;
+  
+  const ratio = teamIndex / (totalTeams - 1);
+  const x = SIM_PIT_BOX_START.x + (SIM_PIT_BOX_END.x - SIM_PIT_BOX_START.x) * ratio;
+  const y = SIM_PIT_BOX_START.y + (SIM_PIT_BOX_END.y - SIM_PIT_BOX_START.y) * ratio;
+  
+  return { x, y };
+}
+
+function getPitBoxDistanceOnPath(pitPath, teamIndex, totalTeams) {
+  if (!pitPath || typeof pitPath.getTotalLength !== 'function') return 0;
+  
+  const pitBoxPosition = getPitBoxPositionForTeam(teamIndex, totalTeams);
+  const pitLength = pitPath.getTotalLength();
+  
+  // Find closest point on pit path to the pit box position
+  let closestDistance = 0;
+  let minDist = Infinity;
+  
+  for (let d = 0; d <= pitLength; d += 1) {
+    const point = pitPath.getPointAtLength(d);
+    const dist = Math.sqrt(
+      Math.pow(point.x - pitBoxPosition.x, 2) + 
+      Math.pow(point.y - pitBoxPosition.y, 2)
+    );
+    if (dist < minDist) {
+      minDist = dist;
+      closestDistance = d;
+    }
+  }
+  
+  return closestDistance;
+}
+
 function updateSimDrsPickerUI() {
-  const btnStart = document.getElementById('btnPickDrsStart');
-  const btnEnd = document.getElementById('btnPickDrsEnd');
-  const coords = document.getElementById('simDrsCoords');
+  const btnShow = document.getElementById('btnShowCoordinates');
+  const coordsDisplay = document.getElementById('simCoordinatesDisplay');
   const trackSvg = document.querySelector('#section-sim-racing .monza-track');
 
-  const start = simState.drsDraftZone.startMarker;
-  const end = simState.drsDraftZone.endMarker;
-  const startText = start ? `(${start.x}, ${start.y})` : '-';
-  const endText = end ? `(${end.x}, ${end.y})` : '-';
-  const pickModeText = simState.drsPickMode ? ` | Picking: ${simState.drsPickMode.toUpperCase()}` : '';
+  const lastCoord = simState.drsDraftZone.startMarker;
+  const isActive = simState.drsPickMode === 'view';
+  
+  let displayText = '';
+  if (isActive) {
+    displayText = lastCoord 
+      ? `Last clicked: (${lastCoord.x}, ${lastCoord.y}) - Click on track to update`
+      : 'Click on track to see coordinates';
+  } else {
+    displayText = lastCoord
+      ? `Last coordinate: (${lastCoord.x}, ${lastCoord.y})`
+      : 'Click "Show Coordinates" then click on track';
+  }
 
-  if (coords) coords.textContent = `DRS Start: ${startText} | DRS End: ${endText}${pickModeText}`;
-  if (btnStart) btnStart.classList.toggle('is-active', simState.drsPickMode === 'start');
-  if (btnEnd) btnEnd.classList.toggle('is-active', simState.drsPickMode === 'end');
-  if (trackSvg) trackSvg.classList.toggle('drs-pick-mode', Boolean(simState.drsPickMode));
+  if (coordsDisplay) coordsDisplay.textContent = displayText;
+  if (btnShow) {
+    btnShow.classList.toggle('is-active', isActive);
+    btnShow.textContent = isActive ? 'Hide Coordinates' : 'Show Coordinates';
+  }
+  if (trackSvg) trackSvg.classList.toggle('drs-pick-mode', isActive);
 }
 
 function canStartSimPreview() {
@@ -1344,6 +1312,12 @@ function renderSimRacingPreview() {
       SIM_PIT_EXIT_MARKER.y,
       simState.lapLength
     );
+    simState.pitEntryDistance = findClosestDistanceOnPath(
+      racePath,
+      SIM_PIT_ENTRY_MARKER.x,
+      SIM_PIT_ENTRY_MARKER.y,
+      simState.lapLength
+    );
   }
 
   const pitPath = document.getElementById('monzaPitLaneLine');
@@ -1372,6 +1346,27 @@ function startSimQualifyingSession() {
   stopSimRacingAnimation();
   stopSimQualifyingSession();
 
+  // 🏎️ AUTO-OPTIMIZE WING SETUP FOR MONZA
+  if (window.wingSetup && window.wingSetup.calculateOptimalSetupForMonza) {
+    console.log('🔧 Auto-optimizing wing setup for Monza...');
+    state.teams.forEach(team => {
+      const teamDrivers = state.drivers.filter(d => String(d.teamId) === String(team.id));
+      if (teamDrivers.length > 0) {
+        const driver = teamDrivers[0]; // Use first driver for optimization
+        const optimal = window.wingSetup.calculateOptimalSetupForMonza(team, driver);
+        team.setup = {
+          frontWing: optimal.frontWing,
+          rearWing: optimal.rearWing
+        };
+        console.log(`  ✅ ${team.name}: Front ${optimal.frontWing}, Rear ${optimal.rearWing} (${optimal.confidence}% confidence)`);
+      } else {
+        // No driver, use default neutral setup
+        team.setup = { frontWing: 50, rearWing: 50 };
+      }
+    });
+    saveToStorage(); // Save optimized setups
+  }
+
   simState.qualifyingTimeScale = readQualifyingSpeedMultiplier();
   simState.qualifyingDurationSec = SIM_QUALIFYING_DURATION_SEC;
   simState.qualifyingElapsedSec = 0;
@@ -1391,6 +1386,12 @@ function startSimQualifyingSession() {
     SIM_PIT_EXIT_MARKER.y,
     simState.lapLength
   );
+  simState.pitEntryDistance = findClosestDistanceOnPath(
+    racePath,
+    SIM_PIT_ENTRY_MARKER.x,
+    SIM_PIT_ENTRY_MARKER.y,
+    simState.lapLength
+  );
 
   simState.teamsOnGrid = state.teams.slice(0, SIM_MAX_TEAMS_ON_TRACK);
   const baseRuns = buildSimTeamRuns(simState.teamsOnGrid);
@@ -1400,19 +1401,48 @@ function startSimQualifyingSession() {
   simState.qualifiedGridSignature = getSimGridSignature(baseRuns);
   simState.qualifyingGridOrder = [];
 
+  const totalTeams = baseRuns.length;
+  
+  // Group runs by team to assign same pit box for same team
+  const teamPitBoxMap = new Map();
+  let uniqueTeamIndex = 0;
+  const uniqueTeams = [];
+  
+  baseRuns.forEach(run => {
+    const teamId = run.team?.id || `team-${run.tag}`;
+    if (!teamPitBoxMap.has(teamId)) {
+      teamPitBoxMap.set(teamId, uniqueTeamIndex);
+      uniqueTeams.push(teamId);
+      uniqueTeamIndex++;
+    }
+  });
+  
+  const totalUniqueTeams = uniqueTeams.length;
+
   simState.qualifyingRuns = baseRuns.map((run, idx) => {
     const seed = run.driver?.seedId;
-    const skillQualifying = Number(run.driver?.skills?.qualifying);
+    
+    // 🏎️ Use modified skills if available (from wing setup)
+    const effectiveSkills = run.driver?._modifiedSkills || run.driver?.skills;
+    const skillQualifying = effectiveSkills ? inferQualifyingSkill(effectiveSkills) : Number(run.driver?.skills?.qualifying);
+    
     const mappedQualifying = seed ? Number(F1_2025_QUALIFYING_BY_SEED[seed]) : NaN;
     const qualifyingRating = Number.isFinite(skillQualifying) && skillQualifying > 0
       ? skillQualifying
       : (Number.isFinite(mappedQualifying) && mappedQualifying > 0 ? mappedQualifying : 75);
 
+    // Calculate pit box position based on team (not individual driver)
+    const teamId = run.team?.id || `team-${run.tag}`;
+    const teamIndex = teamPitBoxMap.get(teamId);
+    const pitBoxDistance = pitPath ? getPitBoxDistanceOnPath(pitPath, teamIndex, totalUniqueTeams) : 0;
+    console.log(`🏁 ${run.tag} (Team ${teamId}): Pit box ${teamIndex + 1}/${totalUniqueTeams}, distance = ${pitBoxDistance.toFixed(2)}`);
+
     return {
     ...run,
     qualifyingRating,
     inPitLane: true,
-    pitDistance: 0,
+    pitDistance: pitBoxDistance,
+    pitBoxDistance: pitBoxDistance,
     releasedFromPit: false,
     releaseDelaySec: idx * SIM_QUALI_PIT_RELEASE_GAP_SEC,
     nextReleaseSec: idx * SIM_QUALI_PIT_RELEASE_GAP_SEC,
@@ -1530,6 +1560,29 @@ function startSimRacingAnimation() {
 
   stopSimQualifyingSession();
 
+  // 🏎️ AUTO-OPTIMIZE WING SETUP FOR MONZA (if not already optimized in qualifying)
+  if (window.wingSetup && window.wingSetup.calculateOptimalSetupForMonza) {
+    console.log('🔧 Auto-optimizing wing setup for Monza race...');
+    state.teams.forEach(team => {
+      // Only optimize if setup is still neutral (50/50)
+      if (!team.setup || (team.setup.frontWing === 50 && team.setup.rearWing === 50)) {
+        const teamDrivers = state.drivers.filter(d => String(d.teamId) === String(team.id));
+        if (teamDrivers.length > 0) {
+          const driver = teamDrivers[0];
+          const optimal = window.wingSetup.calculateOptimalSetupForMonza(team, driver);
+          team.setup = {
+            frontWing: optimal.frontWing,
+            rearWing: optimal.rearWing
+          };
+          console.log(`  ✅ ${team.name}: Front ${optimal.frontWing}, Rear ${optimal.rearWing} (${optimal.confidence}% confidence)`);
+        } else {
+          team.setup = { frontWing: 50, rearWing: 50 };
+        }
+      }
+    });
+    saveToStorage();
+  }
+
   simState.speed = SIM_DEFAULT_SPEED;
   simState.startTs = performance.now();
   simState.lastTickTs = simState.startTs;
@@ -1645,12 +1698,59 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
       run.releasedFromPit = true;
       run.qualiPhase = 'OUTLAP';
       run.inPitLane = true;
-      run.pitDistance = 0;
+      run.pitDistance = Number(run.pitBoxDistance) || 0;
       run.outLapComplete = false;
       activeDt = Math.max(0, dtSec - Math.max(0, timeToRelease));
     }
 
     if (activeDt <= 0) return;
+
+    // Handle RETURNING_TO_PIT phase - car drives forward to its pit box
+    if (run.qualiPhase === 'RETURNING_TO_PIT' && run.inPitLane) {
+      const pitSpeedKmh = SIM_QUALI_PIT_SPEED_KMH;
+      const pitPathSpeed = (pitSpeedKmh / SIM_MAX_SPEED_KMH) * SIM_BASE_PATH_SPEED;
+      run.currentSpeedKmh = pitSpeedKmh;
+      run.currentPathSpeed = pitPathSpeed;
+      
+      // Drive forward towards pit box
+      const targetPitBox = Number(run.pitBoxDistance) || 0;
+      const currentPitDist = Number(run.pitDistance) || 0;
+      
+      if (currentPitDist < targetPitBox) {
+        // Still need to go forward to pit box
+        run.pitDistance = Math.min(targetPitBox, currentPitDist + pitPathSpeed * activeDt);
+      } else {
+        // Reached or passed pit box, stop and wait 30 seconds
+        run.pitDistance = targetPitBox;
+        run.qualiPhase = 'PIT_STOP';
+        run.pitStopStartTime = elapsedBeforeStepSec;
+        run.pitStopDuration = 30; // 30 seconds pit stop
+        run.currentSpeedKmh = 0;
+        run.currentPathSpeed = 0;
+        console.log(`🏁 ${run.tag} reached pit box at pitDistance=${targetPitBox.toFixed(2)}, starting 30s pit stop`);
+      }
+      return;
+    }
+
+    // Handle PIT_STOP phase - car waits in pit box
+    if (run.qualiPhase === 'PIT_STOP' && run.inPitLane) {
+      const pitStopElapsed = elapsedBeforeStepSec - (run.pitStopStartTime || 0);
+      const pitStopDuration = run.pitStopDuration || 30;
+      
+      if (pitStopElapsed >= pitStopDuration) {
+        // Pit stop complete, ready to release
+        run.qualiPhase = 'WAIT_PIT';
+        run.outLapComplete = false;
+        run.timedLapStartSec = null;
+        run.nextReleaseSec = elapsedBeforeStepSec + SIM_QUALI_PIT_RELEASE_GAP_SEC;
+        console.log(`🏁 ${run.tag} pit stop complete after ${pitStopElapsed.toFixed(1)}s, will release at ${run.nextReleaseSec.toFixed(1)}s`);
+      } else {
+        // Still in pit stop, remain stationary
+        run.currentSpeedKmh = 0;
+        run.currentPathSpeed = 0;
+      }
+      return;
+    }
 
     if (run.inPitLane) {
       const pitSpeedKmh = SIM_QUALI_PIT_SPEED_KMH;
@@ -1730,6 +1830,18 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
 
     const nextDistanceOnLap = ((run.currentDistance % lapLength) + lapLength) % lapLength;
 
+    // Check if car in RETURNING_TO_PIT phase reaches pit entry point
+    if (run.qualiPhase === 'RETURNING_TO_PIT' && !run.inPitLane && typeof simState.pitEntryDistance === 'number') {
+      const crossedPitEntry = hasCrossedDistanceOnLap(previousDistanceOnLap, nextDistanceOnLap, simState.pitEntryDistance, lapLength);
+      if (crossedPitEntry) {
+        // Car enters pit lane from pit entry
+        console.log(`🏁 ${run.tag} crossed pit entry at ${simState.pitEntryDistance.toFixed(2)}, entering pitlane from START (pitDistance=0)`);
+        run.inPitLane = true;
+        run.pitDistance = 0; // Start from beginning of pit lane (pit entry)
+        run.currentSpeedKmh = SIM_QUALI_PIT_SPEED_KMH;
+      }
+    }
+
     if (!run.drsActive && Array.isArray(simState.drsZones) && simState.drsZones.length > 0) {
       const activationZone = simState.drsZones.find(zone =>
         hasCrossedDistanceOnLap(previousDistanceOnLap, nextDistanceOnLap, zone.startDistance, lapLength)
@@ -1770,24 +1882,6 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
       return;
     }
 
-    if (run.qualiPhase === 'COOLDOWN') {
-      run.inPitLane = false;
-      run.pitDistance = 0;
-      run.currentDistance = Number(simState.pitExitDistance) || 0;
-      run.currentSpeedKmh = 0;
-      run.currentPathSpeed = 0;
-      run.outLapComplete = false;
-      run.timedLapStartSec = null;
-      run.drsActive = false;
-      run.drsZoneId = null;
-      run.drsEndDistance = null;
-      run.ersActive = false;
-      run.ersBoostKmh = 0;
-      run.qualiPhase = 'WAIT_PIT';
-      run.nextReleaseSec = crossingTimeSec + SIM_QUALI_PIT_TURNAROUND_SEC;
-      return;
-    }
-
     if (run.qualiPhase !== 'TIMED') return;
 
     if (!Number.isFinite(run.timedLapStartSec)) {
@@ -1807,7 +1901,18 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
       ? Math.min(Number(run.bestLapSec), lapTimeSec)
       : lapTimeSec;
     run.timedLapStartSec = null;
-    run.qualiPhase = 'COOLDOWN';
+    
+    // After finishing timed lap, car does cooldown lap on track before entering pit
+    run.qualiPhase = 'RETURNING_TO_PIT';
+    run.inPitLane = false; // Still on track
+    run.drsActive = false;
+    run.drsZoneId = null;
+    run.drsEndDistance = null;
+    run.ersActive = false;
+    run.ersBoostKmh = 0;
+    
+    console.log(`🏁 ${run.tag} finished timed lap, starting cooldown lap. inPitLane=${run.inPitLane}, currentDistance=${run.currentDistance.toFixed(2)}`);
+    
     if (!run.hasTimedLap) run.hasTimedLap = true;
   });
 
@@ -1835,7 +1940,8 @@ function renderQualifyingDotsAtTime(elapsedSec, cachedLapLength) {
     let point;
 
     if (run.qualiPhase === 'WAIT_PIT') {
-      point = pitPath.getPointAtLength(0);
+      const pitDistance = Math.max(0, Math.min(pitLength, Number(run.pitBoxDistance) || 0));
+      point = pitPath.getPointAtLength(pitDistance);
     } else if (run.inPitLane) {
       const pitDistance = Math.max(0, Math.min(pitLength, Number(run.pitDistance) || 0));
       point = pitPath.getPointAtLength(pitDistance);
@@ -1853,11 +1959,15 @@ function renderQualifyingDotsAtTime(elapsedSec, cachedLapLength) {
     const lapCount = Array.isArray(run.lapTimesSec) ? run.lapTimesSec.length : 0;
     const status = run.qualiPhase === 'WAIT_PIT'
       ? 'WAIT PIT'
-      : (run.inPitLane
-        ? 'PIT OUT'
-        : (run.qualiPhase === 'TIMED'
-          ? `TIMED (${lapCount})`
-          : (run.qualiPhase === 'COOLDOWN' ? 'COOLDOWN' : 'OUTLAP')));
+      : (run.qualiPhase === 'RETURNING_TO_PIT'
+        ? 'RETURN PIT'
+        : (run.qualiPhase === 'PIT_STOP'
+          ? 'PIT STOP'
+          : (run.inPitLane
+            ? 'PIT OUT'
+            : (run.qualiPhase === 'TIMED'
+              ? `TIMED (${lapCount})`
+              : (run.qualiPhase === 'COOLDOWN' ? 'COOLDOWN' : 'OUTLAP')))));
     const speed = Math.round(Number(run.currentSpeedKmh) || 0);
     const bestText = Number.isFinite(run.bestLapSec) ? formatLapTimeSec(run.bestLapSec) : '--:--.---';
 
@@ -1890,11 +2000,15 @@ function renderQualifyingDriverTiming(runs, elapsedSec, lapLength) {
     const lapCount = Array.isArray(run.lapTimesSec) ? run.lapTimesSec.length : 0;
     const status = run.qualiPhase === 'WAIT_PIT'
       ? 'WAIT PIT'
-      : (run.inPitLane
-        ? 'PIT OUT'
-        : (run.qualiPhase === 'TIMED'
-          ? `TIMED (${lapCount})`
-          : (run.qualiPhase === 'COOLDOWN' ? 'COOLDOWN' : 'OUTLAP')));
+      : (run.qualiPhase === 'RETURNING_TO_PIT'
+        ? 'RETURN PIT'
+        : (run.qualiPhase === 'PIT_STOP'
+          ? 'PIT STOP'
+          : (run.inPitLane
+            ? 'PIT OUT'
+            : (run.qualiPhase === 'TIMED'
+              ? `TIMED (${lapCount})`
+              : (run.qualiPhase === 'COOLDOWN' ? 'COOLDOWN' : 'OUTLAP')))));
 
     return `
       <span class="sim-legend-item">
@@ -2549,14 +2663,24 @@ function buildSimTeamRuns(teamsOnGrid) {
 
   return runs.map((runObj, idx) => {
     const team = runObj.team;
+    const driver = runObj.driver;
     const setup = normalizeCarSetup(team.carSetup);
     const pu = Math.min(SIM_POWER_UNIT_MAX, Math.max(1, Number(setup.powerUnit) || CAR_STAT_DEFAULTS.powerUnit));
     const ersDeployRating = normalizeErsDeployRating(setup.ersDeploy);
     const speedKmh = SIM_MAX_SPEED_KMH - (SIM_POWER_UNIT_MAX - pu) * SIM_KMH_DROP_PER_PU;
 
+    // 🏎️ WING SETUP INTEGRATION - Apply wing modifiers to driver skills
+    let modifiedSkills = null;
+    if (driver && driver.skills && team.setup && window.wingSetup) {
+      const baseSkills = normalizeDriverSkills(driver.skills);
+      modifiedSkills = window.wingSetup.applyWingSetupToSkills(baseSkills, team.setup);
+      // Store modified skills on driver object for simulation use
+      driver._modifiedSkills = modifiedSkills;
+    }
+
     return {
       team,
-      driver: runObj.driver || null,
+      driver: driver || null,
       tag: runObj.tag,
       powerUnit: pu,
       ersDeployRating,
@@ -3463,3 +3587,24 @@ function showToast(message, type = 'success') {
     toast.classList.remove('show');
   }, 3000);
 }
+
+// ============================================================
+//  INITIALIZE APPLICATION
+// ============================================================
+// Called immediately after all functions and variables are declared
+(function initApp() {
+  console.log('🔧 Initializing app.js...');
+  
+  initNavigation();
+  initTeamForm();
+  initCarSetupSection();
+  initSimRacingSection();
+  initDriverForm();
+  initSearch();
+  initColorPicker();
+  initFormToggles();
+  initSpeedometer();
+  openChampionshipScreen(); // always show on load
+  
+  console.log('✅ app.js initialization complete');
+})();

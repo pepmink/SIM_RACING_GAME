@@ -111,3 +111,40 @@ export const SIM_SESSION_PHASES = {
   RACE_RUNNING: 'race-running',
   RACE_FINISHED: 'race-finished'
 };
+
+// Wing Setup System
+export const WING_SETUP_MIN = 0;
+export const WING_SETUP_MAX = 100;
+export const WING_SETUP_NEUTRAL_POINT = 50;
+
+// Front Wing Modifiers
+export const FRONT_WING_OVERTAKING_MAX_BONUS = 8;
+export const FRONT_WING_DEFENDING_MAX_BONUS = 6;
+export const FRONT_WING_CORNERING_MAX_BONUS = 10;
+export const FRONT_WING_CONTROL_MAX_BONUS = 7;
+
+// Rear Wing Modifiers
+export const REAR_WING_BRAKING_MAX_BONUS = 9;
+export const REAR_WING_SMOOTH_MAX_BONUS = 8;
+
+// Monza Track Profile
+export const MONZA_TRACK_PROFILE = {
+  straightSpeed: 95,
+  cornerSpeed: 25,
+  brakingZones: 70,
+  technicalSections: 20,
+  overtakingOpportunity: 90
+};
+
+export const MONZA_OPTIMAL_SETUP = {
+  frontWing: { min: 15, ideal: 25, max: 35 },
+  rearWing: { min: 10, ideal: 20, max: 30 }
+};
+
+export const MONZA_SETUP_WEIGHTS = {
+  straightSpeed: 0.40,
+  overtaking: 0.25,
+  braking: 0.20,
+  cornering: 0.10,
+  stability: 0.05
+};

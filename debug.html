@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug - Module Loading</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #1a1a1a;
+      color: #00ff00;
+      padding: 20px;
+    }
+    .log { 
+      background: #2a2a2a; 
+      padding: 10px; 
+      margin: 5px 0; 
+      border-left: 3px solid #00ff00;
+    }
+    .error { 
+      border-left-color: #ff0000; 
+      color: #ff0000; 
+    }
+    .success { 
+      border-left-color: #00ff00; 
+    }
+    .warning { 
+      border-left-color: #ffaa00; 
+      color: #ffaa00; 
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Debug - Module Loading Test</h1>
+  <div id="logs"></div>
+
+  <script>
+    const logs = document.getElementById('logs');
+    
+    function log(message, type = 'log') {
+      const div = document.createElement('div');
+      div.className = `log ${type}`;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logs.appendChild(div);
+      console.log(message);
+    }
+
+    log('🚀 Starting debug...', 'log');
+    
+    // Test 1: Check if we're on a web server
+    if (window.location.protocol === 'file:') {
+      log('❌ ERROR: Running from file:// protocol. Must use web server!', 'error');
+      log('💡 Solution: Run "python -m http.server 8000"', 'warning');
+    } else {
+      log('✅ Running on web server: ' + window.location.origin, 'success');
+    }
+
+    // Test 2: Try to load main.js
+    log('📦 Attempting to load js/main.js...', 'log');
+    
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = 'js/main.js';
+    
+    script.onload = () => {
+      log('✅ js/main.js loaded successfully', 'success');
+      
+      // Test 3: Check if modules exposed to window
+      setTimeout(() => {
+        if (window.wingSetup) {
+          log('✅ window.wingSetup available', 'success');
+        } else {
+          log('❌ window.wingSetup NOT available', 'error');
+        }
+        
+        if (window.CHAMPIONSHIPS_DATA) {
+          log('✅ window.CHAMPIONSHIPS_DATA available', 'success');
+          log('   Championships: ' + Object.keys(window.CHAMPIONSHIPS_DATA).join(', '), 'log');
+        } else {
+          log('❌ window.CHAMPIONSHIPS_DATA NOT available', 'error');
+        }
+        
+        if (window.DEFAULT_TEAMS_BY_CHAMP) {
+          log('✅ window.DEFAULT_TEAMS_BY_CHAMP available', 'success');
+          log('   F1 Teams: ' + (window.DEFAULT_TEAMS_BY_CHAMP.f1?.length || 0), 'log');
+        } else {
+          log('❌ window.DEFAULT_TEAMS_BY_CHAMP NOT available', 'error');
+        }
+
+        // Test 4: Try to load app.js
+        log('📦 Attempting to load app.js...', 'log');
+        const appScript = document.createElement('script');
+        appScript.src = 'app.js';
+        appScript.onload = () => {
+          log('✅ app.js loaded successfully', 'success');
+          
+          // Test 5: Check if CHAMPIONSHIPS exists
+          setTimeout(() => {
+            if (typeof CHAMPIONSHIPS !== 'undefined') {
+              log('✅ CHAMPIONSHIPS variable exists in app.js', 'success');
+            } else {
+              log('❌ CHAMPIONSHIPS variable NOT found', 'error');
+            }
+          }, 100);
+        };
+        appScript.onerror = (e) => {
+          log('❌ Failed to load app.js: ' + e.message, 'error');
+        };
+        document.head.appendChild(appScript);
+        
+      }, 500);
+    };
+    
+    script.onerror = (e) => {
+      log('❌ Failed to load js/main.js', 'error');
+      log('   Error: ' + (e.message || 'Unknown error'), 'error');
+      log('💡 Check if js/main.js exists', 'warning');
+      log('💡 Check browser console for CORS errors', 'warning');
+    };
+    
+    document.head.appendChild(script);
+  </script>
+</body>
+</html>

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sim Racing Manager</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet" />
@@ -455,38 +456,22 @@
           </div>
 
           <div class="sim-drs-tools">
-            <button type="button" class="btn btn-ghost" id="btnPickDrsStart">Pick DRS Start</button>
-            <button type="button" class="btn btn-ghost" id="btnPickDrsEnd">Pick DRS End</button>
-            <button type="button" class="btn btn-ghost" id="btnCopyDrsCoords">Copy DRS Coords</button>
-            <span class="sim-drs-coords" id="simDrsCoords">DRS Start: - | DRS End: -</span>
+            <button type="button" class="btn btn-ghost" id="btnShowCoordinates">Show Coordinates</button>
+            <button type="button" class="btn btn-ghost" id="btnCopyCoordinates">Copy Coordinates</button>
+            <span class="sim-drs-coords" id="simCoordinatesDisplay">Click "Show Coordinates" then click on track to see coordinates</span>
           </div>
 
           <div class="monza-track-wrap" id="monzaTrackWrap">
             <svg class="monza-track" viewBox="-20 0 860 450" aria-label="Monza track preview" role="img">
               <rect x="-20" y="0" width="860" height="450" fill="white" />
 
-              <path id="monzaPitLaneLine" d="M 760 372 L 580 372 C 570 372 560 375 550 378 L 415 378" fill="none" stroke="#bdc3c7" stroke-width="4" />
+              <path id="monzaPitLaneLine" d="M 786.8 374.6 L 760 372 L 580 370 C 570 372 560 375 550 378 L 415 378" fill="none" stroke="#bdc3c7" stroke-width="4" />
               <text x="760" y="365" font-family="Arial" font-size="12" font-weight="bold" text-anchor="end">PIT IN</text>
               <text x="510" y="370" font-family="Arial" font-size="12" font-weight="bold">PIT OUT</text>
 
-              <path id="monzaRaceLine" d="M 600 380
-                       L 415 380 L 415 365 L 415 365 L 402 380
-                       L 300 380
-                       C 249 380 215 375 205 330
-                       L 185 240 L 175 225 L 185 220
-                       L 145 110
-                       C 140 75 185 75 185 75
-                       L 235 75
-                       C 265 75 275 90 281 96
-                       L 460 270
-                       C 475 285 490 285 500 270
-                       C 510 255 525 255 535 270
-                       L 780 270
-                       C 840 270 840 380 780 380
-                       Z"
-                    fill="none" stroke="black" stroke-width="8" stroke-linejoin="round" />
+              <path id="monzaRaceLine" d="M 600 380 L 415 380 L 415 365 L 415 365 L 402 380 L 300 380 C 249 380 215 375 205 330 L 185 240 L 175 225 L 185 220 L 145 110 C 140 75 185 75 185 75 L 235 75 C 265 75 275 90 281 96 L 460 270 C 475 285 490 285 500 270 C 510 255 525 255 535 270 L 780 270 C 840 270 840 380 780 380 Z" fill="none" stroke="black" stroke-width="8" stroke-linejoin="round" />
 
-                  <g id="monzaRaceDots"></g>
+              <g id="monzaRaceDots"></g>
 
               <line x1="600" y1="365" x2="600" y2="395" stroke="black" stroke-width="2" />
               <rect x="595" y="375" width="10" height="10" fill="url(#checkered)" />
@@ -775,6 +760,7 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- Load ES6 modules first, then app.js -->
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
