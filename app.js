@@ -1792,7 +1792,11 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
       currentSpeed > SIM_QUALI_ERS_MIN_SPEED_KMH;
 
     const ersBoostKmh = shouldDeployErs ? getErsBoostKmh(ersDeployRating) : 0;
-    const baseTargetSpeedKmh = drsTopSpeedKmh + ersBoostKmh + qualifyingSpeedBoostKmh;
+    
+    // 🏎️ STRAIGHT-LINE DRAG - Apply wing setup drag penalty/bonus
+    const wingDragPenalty = calculateStraightLineDrag(run.team?.setup?.frontWing || 50);
+    
+    const baseTargetSpeedKmh = drsTopSpeedKmh + ersBoostKmh + qualifyingSpeedBoostKmh - wingDragPenalty;
     const targetSpeedKmh = getBrakeTargetSpeedKmh(baseTargetSpeedKmh, previousDistanceOnLap, lapLength, run);
 
     const referencePathSpeed = Math.max(run.currentPathSpeed || run.pathSpeed, 0.05);
@@ -2468,6 +2472,28 @@ function getRaceErsSpeedBoostKmh(baseSpeedKmh, ersDeployRating) {
   return baseSpeed * SIM_RACE_ERS_BASE_SPEED_BOOST * getRaceErsEffectiveness(ersDeployRating);
 }
 
+function calculateStraightLineDrag(frontWing) {
+  /**
+   * Calculate drag penalty/bonus for straight-line speed based on wing setup
+   * High wing (>50) = High drag = Slower straights (penalty)
+   * Low wing (<50) = Low drag = Faster straights (bonus)
+   * 
+   * @param {number} frontWing - Front wing setting (0-100)
+   * @returns {number} Drag penalty in km/h (positive = slower, negative = faster)
+   */
+  const wing = Math.max(0, Math.min(100, Number(frontWing) || 50));
+  
+  if (wing > 50) {
+    // High wing = High drag = Penalty
+    // Wing 100 → 15 km/h penalty
+    return ((wing - 50) / 50) * 15;
+  } else {
+    // Low wing = Low drag = Bonus
+    // Wing 0 → 8 km/h bonus
+    return -((50 - wing) / 50) * 8;
+  }
+}
+
 function getRequiredBrakeDecelKmhPerSec(currentSpeedKmh, distanceOnLap, currentPathSpeed, lapLength, run) {
   const constraints = [
     { turnDistance: simState.turn1Distance, targetSpeed: SIM_TURN1_ENTRY_KMH, cornerIndex: 0 },
@@ -2579,7 +2605,11 @@ function advanceSimRuns(dtSec, lapLength) {
       currentSpeed >= SIM_RACE_ERS_MIN_SPEED_KMH;
 
     const ersBoostKmh = shouldDeployErs ? getRaceErsSpeedBoostKmh(run.speedKmh, ersDeployRating) : 0;
-    const baseSpeedWithErs = drsTopSpeedKmh + ersBoostKmh;
+    
+    // 🏎️ STRAIGHT-LINE DRAG - Apply wing setup drag penalty/bonus
+    const wingDragPenalty = calculateStraightLineDrag(run.team?.setup?.frontWing || 50);
+    
+    const baseSpeedWithErs = drsTopSpeedKmh + ersBoostKmh - wingDragPenalty;
     const targetSpeedKmh = getBrakeTargetSpeedKmh(baseSpeedWithErs, wrappedDistance, lapLength, run);
 
     const adaptiveDecel = getRequiredBrakeDecelKmhPerSec(currentSpeed, wrappedDistance, referencePathSpeed, lapLength, run);
