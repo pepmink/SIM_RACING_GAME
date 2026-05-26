@@ -19,6 +19,14 @@ import {
   getFrontWingModifiers,
   getRearWingModifiers
 } from './utils/wingSetup.js';
+import {
+  calculateDynamicCornerSpeed,
+  getAllCornerSpeeds,
+  getCornerSpeedBreakdown,
+  compareCornerSpeeds,
+  BASE_CORNER_SPEEDS,
+  TESTING
+} from './utils/dynamicCorneringSpeed.js';
 
 // Import state management
 import { state, simState } from './state/state.js';
@@ -35,6 +43,16 @@ window.wingSetup = {
   applyWingSetupToSkills,
   getFrontWingModifiers,
   getRearWingModifiers
+};
+
+// Dynamic cornering speed utilities - expose globally for app.js compatibility
+window.dynamicCorneringSpeed = {
+  calculateDynamicCornerSpeed,
+  getAllCornerSpeeds,
+  getCornerSpeedBreakdown,
+  compareCornerSpeeds,
+  BASE_CORNER_SPEEDS,
+  TESTING
 };
 
 // Expose constants globally for app.js compatibility
@@ -64,7 +82,8 @@ window.F1_2025_QUALIFYING_BY_SEED = F1_2025_QUALIFYING_BY_SEED;
 // ============================================================
 console.log('✅ ES6 Modules loaded successfully');
 console.log('📦 Wing Setup System: ACTIVE');
-console.log('🏎️ Championships loaded:', Object.keys(CHAMPIONSHIPS));
+console.log('🏎️ Dynamic Cornering Speed System: ACTIVE');
+console.log('🏁 Championships loaded:', Object.keys(CHAMPIONSHIPS));
 console.log('🏁 F1 Teams with setup:', DEFAULT_TEAMS_BY_CHAMP.f1.length);
 
 // Add loading overlay to championship screen

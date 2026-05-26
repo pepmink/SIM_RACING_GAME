@@ -1793,10 +1793,10 @@ function advanceQualifyingRuns(dtSec, lapLength, elapsedBeforeStepSec) {
 
     const ersBoostKmh = shouldDeployErs ? getErsBoostKmh(ersDeployRating) : 0;
     const baseTargetSpeedKmh = drsTopSpeedKmh + ersBoostKmh + qualifyingSpeedBoostKmh;
-    const targetSpeedKmh = getBrakeTargetSpeedKmh(baseTargetSpeedKmh, previousDistanceOnLap, lapLength);
+    const targetSpeedKmh = getBrakeTargetSpeedKmh(baseTargetSpeedKmh, previousDistanceOnLap, lapLength, run);
 
     const referencePathSpeed = Math.max(run.currentPathSpeed || run.pathSpeed, 0.05);
-    const adaptiveDecel = getRequiredBrakeDecelKmhPerSec(currentSpeed, previousDistanceOnLap, referencePathSpeed, lapLength);
+    const adaptiveDecel = getRequiredBrakeDecelKmhPerSec(currentSpeed, previousDistanceOnLap, referencePathSpeed, lapLength, run);
     const decelRate = Math.max(SIM_BRAKE_DECEL_KMH_PER_SEC, adaptiveDecel);
     const decelStep = decelRate * activeDt;
     const accelMultiplier =
@@ -2337,8 +2337,27 @@ function getDrsTopSpeedMultiplier(powerUnit) {
   return 1 + SIM_DRS_TOP_SPEED_BOOST_PU_LT_85;
 }
 
-function applyTurnSpeedTarget(baseSpeedKmh, distanceOnLap, turnDistance, turnTargetSpeed, lapLength) {
+function applyTurnSpeedTarget(baseSpeedKmh, distanceOnLap, turnDistance, turnTargetSpeed, lapLength, run) {
   if (turnDistance == null || !lapLength) return baseSpeedKmh;
+
+  // 🏎️ DYNAMIC CORNERING SPEED - Calculate dynamic corner speed if run data available
+  let dynamicTurnSpeed = turnTargetSpeed;
+  if (run && window.dynamicCorneringSpeed) {
+    // Determine which corner this is based on turnDistance
+    const cornerIndex = getCornerIndexFromDistance(turnDistance);
+    if (cornerIndex !== -1) {
+      const carSetup = run.team?.carSetup || {};
+      const driverSkills = run.driver?._modifiedSkills || run.driver?.skills || {};
+      const wingSetup = run.team?.setup || {};
+      
+      dynamicTurnSpeed = window.dynamicCorneringSpeed.calculateDynamicCornerSpeed(
+        cornerIndex,
+        carSetup,
+        driverSkills,
+        wingSetup
+      );
+    }
+  }
 
   let target = baseSpeedKmh;
   const forwardToTurn = getForwardDistanceOnLap(distanceOnLap, turnDistance, lapLength);
@@ -2346,29 +2365,43 @@ function applyTurnSpeedTarget(baseSpeedKmh, distanceOnLap, turnDistance, turnTar
   // Start braking before the turn and reach entry speed right at the apex marker.
   if (forwardToTurn <= SIM_BRAKE_PREP_DISTANCE) {
     const t = Math.max(0, Math.min(1, forwardToTurn / SIM_BRAKE_PREP_DISTANCE));
-    const rampSpeed = turnTargetSpeed + (baseSpeedKmh - turnTargetSpeed) * t;
+    const rampSpeed = dynamicTurnSpeed + (baseSpeedKmh - dynamicTurnSpeed) * t;
     target = Math.min(target, rampSpeed);
   }
 
   // Hold entry speed around the apex to avoid immediate re-acceleration spike.
   if (isDistanceInsideWindow(distanceOnLap, turnDistance, SIM_APEX_HOLD_WINDOW, lapLength)) {
-    target = Math.min(target, turnTargetSpeed);
+    target = Math.min(target, dynamicTurnSpeed);
   }
 
   return target;
 }
 
-function getBrakeTargetSpeedKmh(baseSpeedKmh, distanceOnLap, lapLength) {
+// Helper function to map turn distance to corner index (0-8)
+function getCornerIndexFromDistance(turnDistance) {
+  if (turnDistance === simState.turn1Distance) return 0;
+  if (turnDistance === simState.turn2Distance) return 1;
+  if (turnDistance === simState.turn4Distance) return 2;
+  if (turnDistance === simState.turn6Distance) return 3;
+  if (turnDistance === simState.turn7Distance) return 4;
+  if (turnDistance === simState.turn8Distance) return 5;
+  if (turnDistance === simState.turn9Distance) return 6;
+  if (turnDistance === simState.turn10Distance) return 7;
+  if (turnDistance === simState.turn11Distance) return 8;
+  return -1;
+}
+
+function getBrakeTargetSpeedKmh(baseSpeedKmh, distanceOnLap, lapLength, run) {
   let target = baseSpeedKmh;
-  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn1Distance, SIM_TURN1_ENTRY_KMH, lapLength);
-  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn2Distance, SIM_TURN2_ENTRY_KMH, lapLength);
-  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn4Distance, SIM_TURN4_ENTRY_KMH, lapLength);
-  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn6Distance, SIM_TURN6_ENTRY_KMH, lapLength);
-  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn7Distance, SIM_TURN7_ENTRY_KMH, lapLength);
-  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn8Distance, SIM_TURN8_ENTRY_KMH, lapLength);
-  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn9Distance, SIM_TURN9_ENTRY_KMH, lapLength);
-  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn10Distance, SIM_TURN10_ENTRY_KMH, lapLength);
-  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn11Distance, SIM_TURN11_ENTRY_KMH, lapLength);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn1Distance, SIM_TURN1_ENTRY_KMH, lapLength, run);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn2Distance, SIM_TURN2_ENTRY_KMH, lapLength, run);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn4Distance, SIM_TURN4_ENTRY_KMH, lapLength, run);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn6Distance, SIM_TURN6_ENTRY_KMH, lapLength, run);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn7Distance, SIM_TURN7_ENTRY_KMH, lapLength, run);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn8Distance, SIM_TURN8_ENTRY_KMH, lapLength, run);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn9Distance, SIM_TURN9_ENTRY_KMH, lapLength, run);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn10Distance, SIM_TURN10_ENTRY_KMH, lapLength, run);
+  target = applyTurnSpeedTarget(target, distanceOnLap, simState.turn11Distance, SIM_TURN11_ENTRY_KMH, lapLength, run);
   return target;
 }
 
@@ -2435,30 +2468,45 @@ function getRaceErsSpeedBoostKmh(baseSpeedKmh, ersDeployRating) {
   return baseSpeed * SIM_RACE_ERS_BASE_SPEED_BOOST * getRaceErsEffectiveness(ersDeployRating);
 }
 
-function getRequiredBrakeDecelKmhPerSec(currentSpeedKmh, distanceOnLap, currentPathSpeed, lapLength) {
+function getRequiredBrakeDecelKmhPerSec(currentSpeedKmh, distanceOnLap, currentPathSpeed, lapLength, run) {
   const constraints = [
-    { turnDistance: simState.turn1Distance, targetSpeed: SIM_TURN1_ENTRY_KMH },
-    { turnDistance: simState.turn2Distance, targetSpeed: SIM_TURN2_ENTRY_KMH },
-    { turnDistance: simState.turn4Distance, targetSpeed: SIM_TURN4_ENTRY_KMH },
-    { turnDistance: simState.turn6Distance, targetSpeed: SIM_TURN6_ENTRY_KMH },
-    { turnDistance: simState.turn7Distance, targetSpeed: SIM_TURN7_ENTRY_KMH },
-    { turnDistance: simState.turn8Distance, targetSpeed: SIM_TURN8_ENTRY_KMH },
-    { turnDistance: simState.turn9Distance, targetSpeed: SIM_TURN9_ENTRY_KMH },
-    { turnDistance: simState.turn10Distance, targetSpeed: SIM_TURN10_ENTRY_KMH },
-    { turnDistance: simState.turn11Distance, targetSpeed: SIM_TURN11_ENTRY_KMH }
+    { turnDistance: simState.turn1Distance, targetSpeed: SIM_TURN1_ENTRY_KMH, cornerIndex: 0 },
+    { turnDistance: simState.turn2Distance, targetSpeed: SIM_TURN2_ENTRY_KMH, cornerIndex: 1 },
+    { turnDistance: simState.turn4Distance, targetSpeed: SIM_TURN4_ENTRY_KMH, cornerIndex: 2 },
+    { turnDistance: simState.turn6Distance, targetSpeed: SIM_TURN6_ENTRY_KMH, cornerIndex: 3 },
+    { turnDistance: simState.turn7Distance, targetSpeed: SIM_TURN7_ENTRY_KMH, cornerIndex: 4 },
+    { turnDistance: simState.turn8Distance, targetSpeed: SIM_TURN8_ENTRY_KMH, cornerIndex: 5 },
+    { turnDistance: simState.turn9Distance, targetSpeed: SIM_TURN9_ENTRY_KMH, cornerIndex: 6 },
+    { turnDistance: simState.turn10Distance, targetSpeed: SIM_TURN10_ENTRY_KMH, cornerIndex: 7 },
+    { turnDistance: simState.turn11Distance, targetSpeed: SIM_TURN11_ENTRY_KMH, cornerIndex: 8 }
   ];
 
   let requiredDecel = 0;
 
-  constraints.forEach(({ turnDistance, targetSpeed }) => {
+  constraints.forEach(({ turnDistance, targetSpeed, cornerIndex }) => {
     if (turnDistance == null) return;
+
+    // 🏎️ DYNAMIC CORNERING SPEED - Calculate dynamic corner speed
+    let dynamicTargetSpeed = targetSpeed;
+    if (run && window.dynamicCorneringSpeed) {
+      const carSetup = run.team?.carSetup || {};
+      const driverSkills = run.driver?._modifiedSkills || run.driver?.skills || {};
+      const wingSetup = run.team?.setup || {};
+      
+      dynamicTargetSpeed = window.dynamicCorneringSpeed.calculateDynamicCornerSpeed(
+        cornerIndex,
+        carSetup,
+        driverSkills,
+        wingSetup
+      );
+    }
 
     const distanceToTurn = getForwardDistanceOnLap(distanceOnLap, turnDistance, lapLength);
     if (distanceToTurn > SIM_BRAKE_PREP_DISTANCE) return;
-    if (currentSpeedKmh <= targetSpeed) return;
+    if (currentSpeedKmh <= dynamicTargetSpeed) return;
 
     const timeToTurn = distanceToTurn / Math.max(currentPathSpeed, 0.05);
-    const neededDecel = (currentSpeedKmh - targetSpeed) / Math.max(timeToTurn, 0.05);
+    const neededDecel = (currentSpeedKmh - dynamicTargetSpeed) / Math.max(timeToTurn, 0.05);
     requiredDecel = Math.max(requiredDecel, neededDecel * 1.1);
   });
 
@@ -2532,9 +2580,9 @@ function advanceSimRuns(dtSec, lapLength) {
 
     const ersBoostKmh = shouldDeployErs ? getRaceErsSpeedBoostKmh(run.speedKmh, ersDeployRating) : 0;
     const baseSpeedWithErs = drsTopSpeedKmh + ersBoostKmh;
-    const targetSpeedKmh = getBrakeTargetSpeedKmh(baseSpeedWithErs, wrappedDistance, lapLength);
+    const targetSpeedKmh = getBrakeTargetSpeedKmh(baseSpeedWithErs, wrappedDistance, lapLength, run);
 
-    const adaptiveDecel = getRequiredBrakeDecelKmhPerSec(currentSpeed, wrappedDistance, referencePathSpeed, lapLength);
+    const adaptiveDecel = getRequiredBrakeDecelKmhPerSec(currentSpeed, wrappedDistance, referencePathSpeed, lapLength, run);
     const decelRate = Math.max(SIM_BRAKE_DECEL_KMH_PER_SEC, adaptiveDecel);
     const decelStep = decelRate * dtSec;
     const accelMultiplier =
