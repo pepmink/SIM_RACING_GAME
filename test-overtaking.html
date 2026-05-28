@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overtaking System Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d0d0f;
+      color: #f0f0f5;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { color: #e10600; }
+    h2 { color: #ff4833; margin-top: 30px; }
+    .test-section {
+      background: #1e1e26;
+      border: 1px solid #2e2e3a;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .success {
+      background: rgba(0, 200, 83, 0.2);
+      border-left: 3px solid #00c853;
+    }
+    .fail {
+      background: rgba(225, 6, 0, 0.2);
+      border-left: 3px solid #e10600;
+    }
+    .info {
+      background: rgba(41, 121, 255, 0.2);
+      border-left: 3px solid #2979ff;
+    }
+    button {
+      background: #e10600;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #ff4833;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #2e2e3a;
+    }
+    th {
+      background: #252530;
+      color: #ffd600;
+    }
+    .zone-easy { color: #4caf50; }
+    .zone-medium { color: #ff9800; }
+    .zone-hard { color: #f44336; }
+  </style>
+</head>
+<body>
+  <h1>🏎️ Overtaking & Defending System Test</h1>
+  <p>This page tests the overtaking system module independently.</p>
+
+  <div class="test-section">
+    <h2>📦 Module Loading</h2>
+    <div id="moduleTest"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>🗺️ Overtaking Zones</h2>
+    <div id="zonesTest"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>📊 Success Calculation Tests</h2>
+    <button onclick="runSuccessTests()">Run Tests</button>
+    <div id="successTests"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>⚔️ Battle Scenarios</h2>
+    <button onclick="runBattleScenarios()">Run Scenarios</button>
+    <div id="battleScenarios"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>⏱️ Gap Calculation Test</h2>
+    <button onclick="runGapTests()">Run Tests</button>
+    <div id="gapTests"></div>
+  </div>
+
+  <script type="module">
+    import * as overtakingSystem from './js/utils/overtakingSystem.js';
+    window.overtakingSystem = overtakingSystem;
+
+    // Test 1: Module Loading
+    function testModuleLoading() {
+      const output = document.getElementById('moduleTest');
+      let html = '';
+
+      if (window.overtakingSystem) {
+        html += '<div class="test-result success">✅ Module loaded successfully</div>';
+        
+        const exports = [
+          'OVERTAKING_ZONES',
+          'getCurrentOvertakingZone',
+          'calculateOvertakingSuccess',
+          'calculateDefendingSuccess',
+          'canAttemptOvertake',
+          'attemptOvertake',
+          'swapPositions',
+          'calculateGap',
+          'getOvertakingStats',
+          'initializeOvertakingStats',
+          'CONSTANTS'
+        ];
+
+        exports.forEach(exp => {
+          if (window.overtakingSystem[exp]) {
+            html += `<div class="test-result success">✅ ${exp} exported</div>`;
+          } else {
+            html += `<div class="test-result fail">❌ ${exp} missing</div>`;
+          }
+        });
+      } else {
+        html += '<div class="test-result fail">❌ Module failed to load</div>';
+      }
+
+      output.innerHTML = html;
+    }
+
+    // Test 2: Overtaking Zones
+    function testOvertakingZones() {
+      const output = document.getElementById('zonesTest');
+      const zones = window.overtakingSystem.OVERTAKING_ZONES;
+      
+      let html = '<table><thead><tr><th>Zone</th><th>Name</th><th>Difficulty</th><th>Color</th></tr></thead><tbody>';
+      
+      zones.forEach(zone => {
+        const diffClass = `zone-${zone.difficulty}`;
+        html += `
+          <tr>
+            <td>${zone.id}</td>
+            <td>${zone.name}</td>
+            <td class="${diffClass}">${zone.difficulty.toUpperCase()}</td>
+            <td><span style="color: ${zone.color}">${zone.color}</span></td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table>';
+      html += `<div class="test-result info">ℹ️ Total zones: ${zones.length}</div>`;
+      
+      output.innerHTML = html;
+    }
+
+    // Test 3: Success Calculation
+    window.runSuccessTests = function() {
+      const output = document.getElementById('successTests');
+      let html = '';
+
+      const testCases = [
+        {
+          name: 'Top driver, easy zone, DRS+ERS',
+          attacker: {
+            speedKmh: 345,
+            driver: { skills: { overtaking: 92 } },
+            drsActive: true,
+            ersDeploying: true
+          },
+          defender: {
+            speedKmh: 338,
+            driver: { skills: { defending: 88, control: 86 } }
+          },
+          zone: { difficulty: 'easy', name: 'Main Straight' },
+          expectedRange: [70, 85]
+        },
+        {
+          name: 'Weak driver, hard zone, no DRS/ERS',
+          attacker: {
+            speedKmh: 132,
+            driver: { skills: { overtaking: 78 } },
+            drsActive: false,
+            ersDeploying: false
+          },
+          defender: {
+            speedKmh: 130,
+            driver: { skills: { defending: 94, control: 92 } }
+          },
+          zone: { difficulty: 'hard', name: 'Lesmo 1' },
+          expectedRange: [15, 30]
+        },
+        {
+          name: 'Equal drivers, medium zone',
+          attacker: {
+            speedKmh: 280,
+            driver: { skills: { overtaking: 85 } },
+            drsActive: true,
+            ersDeploying: false
+          },
+          defender: {
+            speedKmh: 275,
+            driver: { skills: { defending: 85, control: 85 } }
+          },
+          zone: { difficulty: 'medium', name: 'Curva Grande' },
+          expectedRange: [45, 60]
+        }
+      ];
+
+      testCases.forEach(test => {
+        const attackSuccess = window.overtakingSystem.calculateOvertakingSuccess(
+          test.attacker, test.defender, test.zone
+        );
+        const defendSuccess = window.overtakingSystem.calculateDefendingSuccess(
+          test.defender, test.attacker, test.zone
+        );
+
+        const total = attackSuccess + defendSuccess;
+        const normalizedAttack = (attackSuccess / total * 100).toFixed(1);
+        const normalizedDefend = (defendSuccess / total * 100).toFixed(1);
+
+        const inRange = normalizedAttack >= test.expectedRange[0] && 
+                       normalizedAttack <= test.expectedRange[1];
+
+        const resultClass = inRange ? 'success' : 'fail';
+        const icon = inRange ? '✅' : '❌';
+
+        html += `
+          <div class="test-result ${resultClass}">
+            ${icon} <strong>${test.name}</strong><br>
+            Attack: ${normalizedAttack}% | Defense: ${normalizedDefend}%<br>
+            Expected: ${test.expectedRange[0]}-${test.expectedRange[1]}%
+          </div>
+        `;
+      });
+
+      output.innerHTML = html;
+    };
+
+    // Test 4: Battle Scenarios
+    window.runBattleScenarios = function() {
+      const output = document.getElementById('battleScenarios');
+      let html = '<h3>Simulating 100 battles for each scenario...</h3>';
+
+      const scenarios = [
+        {
+          name: 'Verstappen vs Leclerc (Main Straight)',
+          attacker: {
+            speedKmh: 345,
+            driver: { 
+              first: 'Max', 
+              last: 'Verstappen',
+              skills: { overtaking: 92 } 
+            },
+            drsActive: true,
+            ersDeploying: true,
+            teamTag: 'VER'
+          },
+          defender: {
+            speedKmh: 338,
+            driver: { 
+              first: 'Charles', 
+              last: 'Leclerc',
+              skills: { defending: 88, control: 86 } 
+            },
+            teamTag: 'LEC'
+          },
+          zone: { difficulty: 'easy', name: 'Main Straight' }
+        },
+        {
+          name: 'Albon vs Hamilton (Lesmo 1)',
+          attacker: {
+            speedKmh: 132,
+            driver: { 
+              first: 'Alex', 
+              last: 'Albon',
+              skills: { overtaking: 78 } 
+            },
+            drsActive: false,
+            ersDeploying: false,
+            teamTag: 'ALB'
+          },
+          defender: {
+            speedKmh: 130,
+            driver: { 
+              first: 'Lewis', 
+              last: 'Hamilton',
+              skills: { defending: 94, control: 92 } 
+            },
+            teamTag: 'HAM'
+          },
+          zone: { difficulty: 'hard', name: 'Lesmo 1 Entry' }
+        }
+      ];
+
+      scenarios.forEach(scenario => {
+        let successes = 0;
+        const trials = 100;
+
+        for (let i = 0; i < trials; i++) {
+          const result = window.overtakingSystem.attemptOvertake(
+            scenario.attacker,
+            scenario.defender,
+            scenario.zone,
+            i * 5, // currentTime
+            1 // lap
+          );
+          if (result.success) successes++;
+        }
+
+        const successRate = (successes / trials * 100).toFixed(1);
+
+        html += `
+          <div class="test-result info">
+            <strong>${scenario.name}</strong><br>
+            Success rate: ${successRate}% (${successes}/${trials} attempts)<br>
+            Zone: ${scenario.zone.name} (${scenario.zone.difficulty})
+          </div>
+        `;
+      });
+
+      output.innerHTML = html;
+    };
+
+    // Test 5: Gap Calculation
+    window.runGapTests = function() {
+      const output = document.getElementById('gapTests');
+      let html = '';
+
+      const testCases = [
+        {
+          name: 'Close gap (0.3s)',
+          carBehind: { distance: 1000, speedKmh: 300 },
+          carAhead: { distance: 1025, speedKmh: 300 },
+          lapLength: 5000,
+          expectedGap: 0.3
+        },
+        {
+          name: 'Medium gap (1.0s)',
+          carBehind: { distance: 1000, speedKmh: 300 },
+          carAhead: { distance: 1083.33, speedKmh: 300 },
+          lapLength: 5000,
+          expectedGap: 1.0
+        },
+        {
+          name: 'Large gap (2.0s)',
+          carBehind: { distance: 1000, speedKmh: 300 },
+          carAhead: { distance: 1166.67, speedKmh: 300 },
+          lapLength: 5000,
+          expectedGap: 2.0
+        }
+      ];
+
+      testCases.forEach(test => {
+        const gap = window.overtakingSystem.calculateGap(
+          test.carBehind,
+          test.carAhead,
+          test.lapLength
+        );
+
+        const diff = Math.abs(gap - test.expectedGap);
+        const passed = diff < 0.1; // 0.1s tolerance
+
+        const resultClass = passed ? 'success' : 'fail';
+        const icon = passed ? '✅' : '❌';
+
+        html += `
+          <div class="test-result ${resultClass}">
+            ${icon} <strong>${test.name}</strong><br>
+            Calculated: ${gap.toFixed(3)}s | Expected: ${test.expectedGap}s
+          </div>
+        `;
+      });
+
+      output.innerHTML = html;
+    };
+
+    // Run tests on load
+    testModuleLoading();
+    testOvertakingZones();
+  </script>
+</body>
+</html>

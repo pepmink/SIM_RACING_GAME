@@ -1625,6 +1625,9 @@ function startSimRacingAnimation() {
   setSimResultsTabVisible(false);
   updateSimSessionFlowUI();
 
+  // Clear event log for new race
+  clearEventLog();
+
   setSimStatus('Race running. Cars use speed from Power Unit and can overtake.');
   renderRaceDotsAtTime(0);
 
@@ -2716,6 +2719,121 @@ function advanceSimRuns(dtSec, lapLength) {
     run.drsTopSpeedKmh = drsTopSpeedKmh;
     run.gapAheadSec = Number.isFinite(gapAheadSec) ? gapAheadSec : null;
   });
+
+  // 🏎️ OVERTAKING SYSTEM - Check for overtaking opportunities
+  if (window.overtakingSystem) {
+    processOvertakingAttempts(orderedRuns, lapLength, elapsedSecAfterStep);
+  }
+}
+
+// ============================================================
+//  OVERTAKING SYSTEM INTEGRATION
+// ============================================================
+
+/**
+ * Process overtaking attempts for all cars in the race
+ */
+function processOvertakingAttempts(orderedRuns, lapLength, currentTime) {
+  if (!window.overtakingSystem || orderedRuns.length < 2) return;
+
+  const path = document.getElementById('monzaRaceLine');
+  if (!path) return;
+
+  // Check each pair of adjacent cars (car behind vs car ahead)
+  for (let i = orderedRuns.length - 1; i > 0; i--) {
+    const carBehind = orderedRuns[i];
+    const carAhead = orderedRuns[i - 1];
+
+    // Skip if either car has finished
+    if (carBehind.finishedRace || carAhead.finishedRace) continue;
+
+    // Initialize overtaking stats if not present
+    if (typeof carBehind.overtakesCompleted === 'undefined') {
+      window.overtakingSystem.initializeOvertakingStats(carBehind);
+    }
+    if (typeof carAhead.overtakesCompleted === 'undefined') {
+      window.overtakingSystem.initializeOvertakingStats(carAhead);
+    }
+
+    // Get current positions on track
+    const wrappedDistanceBehind = ((carBehind.currentDistance % lapLength) + lapLength) % lapLength;
+    const wrappedDistanceAhead = ((carAhead.currentDistance % lapLength) + lapLength) % lapLength;
+
+    carBehind.position = path.getPointAtLength(wrappedDistanceBehind);
+    carAhead.position = path.getPointAtLength(wrappedDistanceAhead);
+
+    // Calculate gap
+    const gap = window.overtakingSystem.calculateGap(carBehind, carAhead, lapLength);
+
+    // Check if in overtaking zone
+    const zone = window.overtakingSystem.getCurrentOvertakingZone(carBehind, lapLength);
+
+    // Check if can attempt overtake
+    if (window.overtakingSystem.canAttemptOvertake(carBehind, carAhead, gap, zone, currentTime)) {
+      // Calculate current lap
+      const currentLap = Math.floor(carBehind.currentDistance / lapLength) + 1;
+
+      // Attempt overtake
+      const result = window.overtakingSystem.attemptOvertake(
+        carBehind,
+        carAhead,
+        zone,
+        currentTime,
+        currentLap
+      );
+
+      // Update stats
+      if (result.success) {
+        carBehind.overtakesCompleted++;
+        carAhead.defensesFailed++;
+
+        // Swap positions in array
+        window.overtakingSystem.swapPositions(orderedRuns, carBehind, carAhead);
+
+        // Also update simState.teamRuns to reflect new order
+        const behindIndex = simState.teamRuns.indexOf(carBehind);
+        const aheadIndex = simState.teamRuns.indexOf(carAhead);
+        if (behindIndex !== -1 && aheadIndex !== -1) {
+          [simState.teamRuns[behindIndex], simState.teamRuns[aheadIndex]] = 
+          [simState.teamRuns[aheadIndex], simState.teamRuns[behindIndex]];
+        }
+
+        console.log(`✅ OVERTAKE: ${result.attacker.tag} passed ${result.defender.tag} at ${zone.name} (${result.attacker.probability}% success)`);
+      } else {
+        carBehind.overtakesFailed++;
+        carAhead.defensesSuccessful++;
+
+        console.log(`❌ DEFENSE: ${result.defender.tag} held off ${result.attacker.tag} at ${zone.name} (${result.defender.probability}% defense)`);
+      }
+
+      // Add event to log
+      addOvertakingEventToLog(result);
+
+      // Show battle panel (if UI is ready)
+      if (window.showBattlePanel) {
+        window.showBattlePanel(result, carBehind, carAhead, zone);
+      }
+    }
+  }
+}
+
+/**
+ * Add overtaking event to the event log
+ */
+function addOvertakingEventToLog(result) {
+  if (!window.addEventToLog) return;
+
+  const event = {
+    type: result.success ? 'overtake_success' : 'overtake_failed',
+    attacker: result.attacker.tag,
+    defender: result.defender.tag,
+    zone: result.zone,
+    probability: result.success ? result.attacker.probability + '%' : result.defender.probability + '%',
+    lap: result.lap,
+    timestamp: result.timestamp
+  };
+
+  window.addEventToLog(event);
 }
 
 function buildSimTeamRuns(teamsOnGrid) {
@@ -2943,7 +3061,7 @@ function renderSimResultsTab(results, targetLaps) {
   if (!body || !meta) return;
 
   if (!Array.isArray(results) || results.length === 0) {
-    body.innerHTML = '<tr class="empty-row"><td colspan="6">No race result yet.</td></tr>';
+    body.innerHTML = '<tr class="empty-row"><td colspan="7">No race result yet.</td></tr>';
     meta.textContent = '';
     return;
   }
@@ -2955,12 +3073,18 @@ function renderSimResultsTab(results, targetLaps) {
     const finishTime = Number(run.finishTimeSec) || 0;
     const gapSec = Math.max(0, finishTime - leaderTime);
     const gapLabel = idx === 0 ? 'Leader' : `+${gapSec.toFixed(3)}s`;
+    const overtakes = run.overtakesCompleted || 0;
+    const overtakesClass = overtakes > 0 ? 'positive' : '';
+    const overtakesIcon = overtakes > 0 ? ' ↑' : '';
     return `
       <tr>
         <td>P${idx + 1}</td>
         <td>${escHtml(run.tag)}</td>
         <td>${escHtml(getSimRunDisplayName(run))}</td>
         <td>${escHtml(run.team.name)}</td>
+        <td class="overtakes-cell">
+          <span class="overtakes-badge ${overtakesClass}">${overtakes}${overtakesIcon}</span>
+        </td>
         <td>${finishTime.toFixed(3)}s</td>
         <td>${gapLabel}</td>
       </tr>
@@ -3651,6 +3775,81 @@ function resetForm(formId) {
 }
 
 // ============================================================
+//  EVENT LOG FOR OVERTAKING/DEFENDING
+// ============================================================
+
+/**
+ * Add event to the overtaking event log
+ */
+window.addEventToLog = function(event) {
+  const eventLogList = document.getElementById('eventLogList');
+  const eventLog = document.getElementById('simEventLog');
+  
+  if (!eventLogList || !eventLog) return;
+  
+  // Show event log if hidden
+  if (eventLog.style.display === 'none') {
+    eventLog.style.display = 'block';
+  }
+  
+  const eventItem = document.createElement('div');
+  eventItem.className = `event-log-item ${event.type}`;
+  
+  let icon, message, details;
+  
+  if (event.type === 'overtake_success') {
+    icon = '✅';
+    message = `<strong>${escHtml(event.attacker)}</strong> overtakes <strong>${escHtml(event.defender)}</strong>`;
+    details = `${escHtml(event.zone)} • ${escHtml(event.probability)} success rate`;
+  } else if (event.type === 'overtake_failed') {
+    icon = '❌';
+    message = `<strong>${escHtml(event.attacker)}</strong> failed to pass <strong>${escHtml(event.defender)}</strong>`;
+    details = `${escHtml(event.zone)} • ${escHtml(event.probability)} defense rate`;
+  }
+  
+  eventItem.innerHTML = `
+    <div class="event-icon">${icon}</div>
+    <div class="event-content">
+      <div class="event-message">${message}</div>
+      <div class="event-details">
+        <span class="event-lap">Lap ${event.lap}</span>
+        <span class="event-separator">•</span>
+        <span class="event-zone">${details}</span>
+      </div>
+    </div>
+    <div class="event-time">${escHtml(event.timestamp)}</div>
+  `;
+  
+  // Add to top of list (newest first)
+  eventLogList.insertBefore(eventItem, eventLogList.firstChild);
+  
+  // Limit to 20 events
+  while (eventLogList.children.length > 20) {
+    eventLogList.removeChild(eventLogList.lastChild);
+  }
+};
+
+/**
+ * Clear event log
+ */
+function clearEventLog() {
+  const eventLogList = document.getElementById('eventLogList');
+  if (eventLogList) {
+    eventLogList.innerHTML = '';
+  }
+}
+
+/**
+ * Initialize event log
+ */
+function initEventLog() {
+  const btnClearLog = document.getElementById('btnClearLog');
+  if (btnClearLog) {
+    btnClearLog.addEventListener('click', clearEventLog);
+  }
+}
+
+// ============================================================
 //  TOAST
 // ============================================================
 let toastTimer = null;
@@ -3682,6 +3881,7 @@ function showToast(message, type = 'success') {
   initColorPicker();
   initFormToggles();
   initSpeedometer();
+  initEventLog(); // Initialize event log for overtaking
   openChampionshipScreen(); // always show on load
   
   console.log('✅ app.js initialization complete');
